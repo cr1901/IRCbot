@@ -1,4 +1,5 @@
 /* POSIX headers */
+#define _POSIX_SOURCE /* Required by POSIX. */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
