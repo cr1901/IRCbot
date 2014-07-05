@@ -1,5 +1,6 @@
 /* POSIX headers */
 #define _POSIX_SOURCE /* Required by POSIX. */
+#define _BSD_SOURCE /* See users.c for rationale of this define. */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -12,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+/* This source defines */
+#include "users.h"
 
 #define _NL_ "\r\n"
 

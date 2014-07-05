@@ -2,8 +2,8 @@
 #define _BSD_SOURCE /* At least glibc on Linux requires this... ./configure for 
 Berkeley DB, and the default glibc macros contradict:
 1. using the -ansi option on GCC for compiling, AND/OR
-2. Defining _POSIX_SOURCE for POSIX compliance.
-This application does both :P.
+2. Defining _POSIX_SOURCE for POSIX compliance (non-GCC/GLIBC compilers).
+This application does the latter :P.
 
 POSIX doesn't require u_int, u_long, etc, but Berkeley DB uses them internally,
 defining them with typedefs if they do not exist in db.h. BSD libc sys/types.h defines 
