@@ -7,12 +7,17 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <errno.h>
 
 /* ANSI headers */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stddef.h>
+
+/* Library headers */
+#include <db.h>
 
 /* This source defines */
 #include "users.h"
@@ -49,6 +54,8 @@ typedef struct irc_tokens
 int get_a_socket_and_connect(int * sock, const char * hostname, const char * port);
 int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state);
 int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens);
+int create_path(char * out_buf, const char * str_pre, const char * str_app);
+int create_and_open_db(DB ** db, char * db_path);
 
 /* printf wrappers */
 int sock_printf(int sock, char * buff, /* int buflen, */ const char * fmt, ...);
@@ -58,49 +65,69 @@ int debug_fprintf(FILE * fp, const char * fmt, ...);
 int main(int argc, char * argv[])
 {
   int my_socket, done = 0;
-  char * line_buffer, * output_buffer;
+  char * line_buffer, * output_buffer, * db_path;
   READLINE_STATE socket_buf;
   IRC_TOKENS irc_toks;
+  DB * user_db, * trivia_db;
+  ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
 
-  if(argc < 3)
+  if(argc < 5)
   {
-    fprintf(stderr, "Usage: IRCbot [Bot name] [server] [channel] (port 6667)\n"
-            "Extra arguments ignored.\n");
+    fprintf(stderr, "Usage: IRCbot Bot_name server channel db_path (port 6667)\n"
+            "Extra arguments ignored. db_path shall not have a trailing slash.\n");
     return EXIT_FAILURE;
   }
 
-  /* Just use BUFSIZ for now... should be more than enough (must be > 256,
+  /* Just use BUFSIZ for now... should be more than enough (must be >= 256,
   but I've never seen it less than 512, which is the max IRC message size. */
   socket_buf.buf_offset = socket_buf.buf = malloc(BUFSIZ);
-  socket_buf.bufsiz = BUFSIZ;
-  
   irc_toks.buf = malloc(BUFSIZ);
-  irc_toks.bufsiz = BUFSIZ;
-  
   output_buffer = malloc(BUFSIZ);
   line_buffer = malloc(BUFSIZ);
+  socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;
   
+  /* This should not fail, provided the runtime isn't broken. */
+  db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
+  db_path = malloc(db_path_size + 1 + 16); /* Databases shall have filenames no greater than 16 bytes, including NULL. 
+  The extra character is to append*/
   
-  
-
-  if(socket_buf.buf == NULL || output_buffer == NULL || line_buffer == NULL || irc_toks.buf == NULL)
+  if(socket_buf.buf == NULL || output_buffer == NULL || line_buffer == NULL \
+    || irc_toks.buf == NULL || db_path == NULL)
   {
     fprintf(stderr, "Initial memory allocation failure!\n");
     return EXIT_FAILURE;
   }
+  
+  /* fprintf(stdout, "Path was: %s.\n", db_path);
+  return 0; */
+  create_path(db_path, argv[4], "users.db");
+  if(create_and_open_db(&user_db, db_path))
+  {
+    fprintf(stderr, "Could not initialize user db- aborting.\n");
+  }
+  
+  create_path(db_path, argv[4], "trivia.db");
+  if(create_and_open_db(&trivia_db, db_path))
+  {
+    fprintf(stderr, "Could not initialize trivia db- aborting.\n");
+  }
+  
 
   if(get_a_socket_and_connect(&my_socket, argv[2], "6667"))
   {
     fprintf(stderr, "Could not connect- aborting.\n");
     return EXIT_FAILURE;
   }
-
+  
+  
+  
   sock_printf(my_socket, output_buffer, "USER %s . . :This is a bot programmed by William D. Jones" _NL_, argv[1]);
   sock_printf(my_socket, output_buffer, "NICK %s" _NL_, argv[1]);
   sock_printf(my_socket, output_buffer, "JOIN %s" _NL_, argv[3]);
   /* output_buffer_size = sprintf(output_buffer, "PRIVMSG %s :!help" _NL_, argv[3]);
   write(my_socket, output_buffer, output_buffer_size); */
-
+  
+  /* Main loop begins here */
   while(!done)
   {
     int read_retval, tok_retval;
@@ -129,18 +156,58 @@ int main(int argc, char * argv[])
     }
     else if(tok_retval == 0)
     {
-      int count = 0;
+      char nickname[17]; /* If you need more chars than this, change it! */
+      ptrdiff_t nickname_len;
+      /* int count = 0;
       fprintf(stderr, "Origin: %s, Command: %s, Num Params: %u\nParams:\n", \
       	      irc_toks.prefix, irc_toks.command, irc_toks.num_params);
       for(count = 0; count < irc_toks.num_params; count++)
       {
       	fprintf(stderr, "%d: %s ", count, irc_toks.params[count]);
       }
-      fputs("\n", stderr);
+      fputs("\n", stderr); */
+      
+      nickname_len = strchr(irc_toks.prefix, '!') - irc_toks.prefix;
+      if(nickname_len < 17 && nickname_len >= 0)
+      {
+        strncpy(nickname, irc_toks.prefix, nickname_len);
+      }
+      else
+      {
+      	strcpy(nickname, "NULL");
+      }
+      
+      /* Is this a Private Message? */
+      if(!strcmp(irc_toks.command, "PRIVMSG"))
+      {
+      	/* Is the private message for the bot or ROOM? */
+        if(!strcmp(irc_toks.params[0], argv[3]) || !strcmp(irc_toks.params[0], argv[1]))
+        {
+          /* There is a command being sent... */
+          if(irc_toks.params[1][0] == '%')
+          {
+            /* Check if the command matches... */
+            /* fprintf(stderr, "%s", &irc_toks.params[1][1]); */
+            if(!strcmp(&irc_toks.params[1][1], "register"))
+            {   
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Okay %s, I "\
+              	      "have registered you into the user DB." _NL_, argv[3], nickname);
+            }
+            /* else if */
+            else
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
+              	      "didn't understand the command." _NL_, argv[3], nickname);
+            }
+          }
+        }
+      }
     }
   }
   
   close(my_socket);
+  user_db->close(user_db, 0);
+  trivia_db->close(trivia_db, 0);
   return EXIT_SUCCESS;
 }
 
@@ -396,7 +463,53 @@ int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens)
 
 /* int get_next_token(char * */
 
+/* Todo... add windows version? */
+int create_path(char * out_buf, const char * str_pre, const char * str_app)
+{
+  int str_pre_len;
+  
+  str_pre_len = strlen(str_pre);
+  if(str_pre[str_pre_len - 1] == '/')
+  {
+    sprintf(out_buf, "%s%s", str_pre, str_app);
+  }
+  else
+  {
+    sprintf(out_buf, "%s/%s", str_pre, str_app);
+  }
+  
+  return 0;
+}
 
+int create_and_open_db(DB ** db, char * db_path)
+{
+  int dbopen_retval;
+  
+  if(db_create(db, NULL, 0))
+  {
+    fprintf(stderr, "dbcreate (%s) has failed!\n", db_path);
+    return -1;
+  }
+  
+  dbopen_retval = (* db)->open((* db), NULL, db_path, NULL, DB_BTREE, \
+    DB_CREATE | DB_EXCL, 0644);
+  
+  if(dbopen_retval == EEXIST)
+  {
+    fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
+    if((* db)->open((* db), NULL, db_path, NULL, DB_BTREE, 0, 0644))
+    {
+      fprintf(stderr, "Database open failed (%s)!\n", db_path);
+      return -2;
+    }
+  }
+  else if(dbopen_retval != 0)
+  {
+    return -3;
+  }
+  
+  return 0;
+}
 
 
 int sock_printf(int sock, char * buff, const char * fmt, ...)
@@ -413,13 +526,15 @@ int sock_printf(int sock, char * buff, const char * fmt, ...)
 
 int debug_fprintf(FILE * fp, const char * fmt, ...)
 {
+  #ifndef NDEBUG_MESSAGES
   int chars_written = 0;
   va_list args;
   
-  #ifndef NDEBUG_MESSAGES
   va_start(args, fmt);
   chars_written = vfprintf(fp, fmt, args);
   va_end(args);
-  #endif
   return chars_written;
+  #else
+  return 0;
+  #endif
 }

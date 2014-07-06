@@ -17,7 +17,8 @@ sys     0m0.540s
 WITHOUT_DISTCC
 real    0m9.474s
 user    0m7.850s
-sys     0m0.650s"""
+sys     0m0.650s
+"""
 
 env = Environment(variables = vars) 
 Help(vars.GenerateHelpText(env))
