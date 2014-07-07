@@ -21,5 +21,7 @@ typedef struct user_game_info
   unsigned short int curr_pts;
 }USER_GAME_INFO;
   
-int register_user(char * nickname, char * fullname);
-int join_game(char * nickname, USER_GAME_INFO * gameinfo);
+int register_user(DB * db, char * nickname, char * fullname);
+int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo);
+int store_user_entry(DB * db, USER_DB_INFO * userinfo);
+int load_user_entry(DB * db, USER_DB_INFO * userinfo);

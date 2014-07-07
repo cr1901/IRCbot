@@ -74,7 +74,7 @@ int main(int argc, char * argv[])
   if(argc < 5)
   {
     fprintf(stderr, "Usage: IRCbot Bot_name server channel db_path (port 6667)\n"
-            "Extra arguments ignored. db_path shall not have a trailing slash.\n");
+            "Extra arguments ignored.\n");
     return EXIT_FAILURE;
   }
 
@@ -138,7 +138,10 @@ int main(int argc, char * argv[])
       done = 1;
     }
     /* num_chars_in_curr_line = (token_ptr - curr_start_pos + 1); */
+    
+    #ifndef NPRINT_OUTPUT
     write(0, line_buffer, strlen(line_buffer));
+    #endif
     
     tok_retval = tokenize_irc_line(line_buffer, &irc_toks);
     
@@ -152,11 +155,13 @@ int main(int argc, char * argv[])
       /* Send PONG in response to PING. */
       line_buffer[1] = 'O';
       write(my_socket, line_buffer, strlen(line_buffer) - 1);
-      fprintf(stderr, "PONG sent in response to PING.\n");
+      debug_fprintf(stderr, "PONG sent in response to PING.\n");
     }
     else if(tok_retval == 0)
     {
-      char nickname[17]; /* If you need more chars than this, change it! */
+      /* Will strncat work instead of zero-ing each time this variable comes 
+      into scope? */
+      char nickname[17] = {'\0'}; /* If you need more chars than this, change it! */
       ptrdiff_t nickname_len;
       /* int count = 0;
       fprintf(stderr, "Origin: %s, Command: %s, Num Params: %u\nParams:\n", \
@@ -177,28 +182,41 @@ int main(int argc, char * argv[])
       	strcpy(nickname, "NULL");
       }
       
-      /* Is this a Private Message? */
-      if(!strcmp(irc_toks.command, "PRIVMSG"))
+      /* Is this a Private Message for the bot or room? */
+      if(!strcmp(irc_toks.command, "PRIVMSG") && \
+        (!strcmp(irc_toks.params[0], argv[3]) || !strcmp(irc_toks.params[0], argv[1])))
       {
-      	/* Is the private message for the bot or ROOM? */
-        if(!strcmp(irc_toks.params[0], argv[3]) || !strcmp(irc_toks.params[0], argv[1]))
+        /* There is a command being sent... */
+        if(irc_toks.params[1][0] == '%')
         {
-          /* There is a command being sent... */
-          if(irc_toks.params[1][0] == '%')
+          /* Check if the command matches... */
+          /* fprintf(stderr, "%s", &irc_toks.params[1][1]); */
+          if(!strcmp(&irc_toks.params[1][1], "register"))
           {
-            /* Check if the command matches... */
-            /* fprintf(stderr, "%s", &irc_toks.params[1][1]); */
-            if(!strcmp(&irc_toks.params[1][1], "register"))
-            {   
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Okay %s, I "\
-              	      "have registered you into the user DB." _NL_, argv[3], nickname);
+            int reg_status;
+            reg_status = register_user(user_db, nickname, irc_toks.prefix);
+            
+            if(reg_status == 1)
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :The user DB says"\
+              	      "I have already registered you, %s." _NL_, argv[3], nickname);
             }
-            /* else if */
+            else if(reg_status == 0)
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Okay %s, I "\
+            	      "have registered you into the user DB." _NL_, argv[3], nickname);
+            }
             else
             {
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
-              	      "didn't understand the command." _NL_, argv[3], nickname);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, Something "\
+            	      "went wrong while registering you. Error code %d." _NL_, argv[3], nickname);
             }
+          }
+          /* else if */
+          else
+          {
+            sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
+            	      "didn't understand the command." _NL_, argv[3], nickname);
           }
         }
       }
@@ -277,7 +295,7 @@ int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz
     
     if(used_elements >= temp_state->bufsiz)
     {
-      debug_fprintf(stderr, "Warning: Input socket buffer is full: %d\n", __LINE__);
+      fprintf(stderr, "Warning: Input socket buffer is full: %d\n", __LINE__);
       input_buffer_full = 1;
     }
     else
@@ -304,7 +322,7 @@ int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz
           the last character. */
           if(line_length >= line_bufsiz)
           {
-            debug_fprintf(stderr, "Warning: Output buffer could not hold entire line..." \
+            fprintf(stderr, "Warning: Output buffer could not hold entire line..." \
             	    "it has been truncated: %d\n", __LINE__);
             output_buffer_too_small = 1;
           }
@@ -496,7 +514,7 @@ int create_and_open_db(DB ** db, char * db_path)
   
   if(dbopen_retval == EEXIST)
   {
-    fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
+    debug_fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
     if((* db)->open((* db), NULL, db_path, NULL, DB_BTREE, 0, 0644))
     {
       fprintf(stderr, "Database open failed (%s)!\n", db_path);

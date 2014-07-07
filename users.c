@@ -19,16 +19,72 @@ A better solution may be to check the host platform prior to compiling and add
 a macro if needed, or change the standard/compiler switches for this one file- as long
 as this application code remains ANSI (i.e. does not depend on gcc), either should work
 for other platforms. */
+
+#include <string.h>
+
 #include <db.h>
+#include <jansson.h>
 
 #include "users.h"
 
-int register_user(char * nickname, char * fullname)
+int register_user(DB * db, char * nickname, char * fullname)
+{
+  DBT key, data;
+  DB_BTREE_STAT db_stats;
+  USER_DB_INFO new_user;
+  int get_retval, uid;
+  
+  /* Check that user does not already exist. */
+  
+  memset(&key, 0, sizeof(key));
+  memset(&data, 0, sizeof(data));
+  
+  key.data = nickname;
+  key.size = strlen(nickname) + 1;
+  
+  get_retval = db->get(db, NULL, &key, &data, 0);
+  
+  if(get_retval == 0)
+  {
+    return 1;
+  }
+  else if(get_retval != DB_NOTFOUND)
+  {
+    return -1;
+  }
+  
+  if(db->stat(db, NULL, &db_stats, DB_FAST_STAT))
+  {
+    return -2;
+  }
+  
+  
+  
+  /* user_obj = json_object(void);
+  if(user_obj == NULL)
+  {
+    return -3;
+  } */
+  
+  
+  fprintf(stderr, "A new user has been added.\n");
+
+  return 0;
+}
+
+int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo)
 {
   return 0;
 }
 
-int join_game(char * nickname, USER_GAME_INFO * gameinfo)
+
+
+int store_user_entry(DB * db, USER_DB_INFO * userinfo)
+{
+  return 0;		
+}
+
+int load_user_entry(DB * db, USER_DB_INFO * userinfo)
 {
   return 0;
 }
