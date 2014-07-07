@@ -20,6 +20,7 @@ a macro if needed, or change the standard/compiler switches for this one file- a
 as this application code remains ANSI (i.e. does not depend on gcc), either should work
 for other platforms. */
 
+#include <stdio.h>
 #include <string.h>
 
 #include <db.h>
@@ -32,7 +33,7 @@ int register_user(DB * db, char * nickname, char * fullname)
   DBT key, data;
   DB_BTREE_STAT db_stats;
   USER_DB_INFO new_user;
-  int get_retval, uid;
+  int /* get_retval, */ stor_retval;
   
   /* Check that user does not already exist. */
   
@@ -42,7 +43,7 @@ int register_user(DB * db, char * nickname, char * fullname)
   key.data = nickname;
   key.size = strlen(nickname) + 1;
   
-  get_retval = db->get(db, NULL, &key, &data, 0);
+  /* get_retval = db->get(db, NULL, &key, &data, 0);
   
   if(get_retval == 0)
   {
@@ -51,23 +52,30 @@ int register_user(DB * db, char * nickname, char * fullname)
   else if(get_retval != DB_NOTFOUND)
   {
     return -1;
-  }
+  } */
   
-  if(db->stat(db, NULL, &db_stats, DB_FAST_STAT))
+  if(db->stat(db, NULL, &db_stats, 0))
   {
     return -2;
   }
   
+  new_user.nickname = nickname;
+  new_user.fullname = fullname;
+  new_user.total_pts = new_user.q_total= new_user.q_success= new_user.num_games= 0;
+  new_user.db_id = 0;
+  /* new_user.db_id = db_stats.bt_nkeys; */ /* Doesn't do what I want... */
   
   
-  /* user_obj = json_object(void);
-  if(user_obj == NULL)
+  if((stor_retval = store_user_entry(db, &new_user)) == 1)
+  {
+    return 1;
+  }
+  else if(stor_retval)
   {
     return -3;
-  } */
+  }
   
-  
-  fprintf(stderr, "A new user has been added.\n");
+  fprintf(stderr, "A new user has been added, user id %d.\n", new_user.db_id);
 
   return 0;
 }
@@ -79,8 +87,45 @@ int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo)
 
 
 
-int store_user_entry(DB * db, USER_DB_INFO * userinfo)
+int store_user_entry(DB * db, const USER_DB_INFO * userinfo)
 {
+  DBT key, data;	
+  json_t * json_entry;
+  char * json_string;
+  int dbput_retval;
+  
+  json_entry = json_pack("{s, s, s, s, s, i, s, i, s, i, s, i, s, i}", "nickname", \
+    userinfo->nickname, "fullname", userinfo->fullname, "total_pts", userinfo->total_pts, \
+    "q_total", userinfo->q_total, "q_success", userinfo->q_success, "num_games", \
+    userinfo->num_games, "db_id", userinfo->db_id);
+  if(json_entry == NULL)
+  {
+    return -1;
+  }
+  
+  if((json_string = json_dumps(json_entry, JSON_COMPACT)) == NULL)
+  {
+    return -2;
+  }
+  
+  memset(&key, 0, sizeof(key));
+  memset(&data, 0, sizeof(data));
+  
+  key.data = userinfo->nickname;
+  key.size = strlen(userinfo->nickname) + 1;
+  data.data = json_string;
+  data.size = strlen(json_string) +1;
+  
+  if((dbput_retval = db->put(db, NULL, &key, &data, DB_NOOVERWRITE)) == DB_KEYEXIST)
+  {
+    return 1;
+  }
+  else if(dbput_retval)
+  {
+    return -3;
+  }
+  
+  
   return 0;		
 }
 

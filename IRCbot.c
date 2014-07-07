@@ -198,7 +198,7 @@ int main(int argc, char * argv[])
             
             if(reg_status == 1)
             {
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :The user DB says"\
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :The user DB says "\
               	      "I have already registered you, %s." _NL_, argv[3], nickname);
             }
             else if(reg_status == 0)
