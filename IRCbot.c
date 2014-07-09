@@ -15,6 +15,8 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <time.h>
+#include <errno.h>
 
 /* Library headers */
 #include <db.h>
@@ -55,7 +57,7 @@ int get_a_socket_and_connect(int * sock, const char * hostname, const char * por
 int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state);
 int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens);
 int create_path(char * out_buf, const char * str_pre, const char * str_app);
-int create_and_open_db(DB ** db, char * db_path);
+int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type);
 
 /* printf wrappers */
 int sock_printf(int sock, char * buff, /* int buflen, */ const char * fmt, ...);
@@ -70,6 +72,7 @@ int main(int argc, char * argv[])
   IRC_TOKENS irc_toks;
   DB * user_db, * trivia_db;
   ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
+  int retval;
 
   if(argc < 5)
   {
@@ -101,15 +104,17 @@ int main(int argc, char * argv[])
   /* fprintf(stdout, "Path was: %s.\n", db_path);
   return 0; */
   create_path(db_path, argv[4], "users.db");
-  if(create_and_open_db(&user_db, db_path))
+  if((retval = create_and_open_db(&user_db, db_path, DB_BTREE)))
   {
-    fprintf(stderr, "Could not initialize user db- aborting.\n");
+    fprintf(stderr, "Could not initialize user db- aborting (%d).\n", retval);
+    return EXIT_FAILURE;
   }
   
   create_path(db_path, argv[4], "trivia.db");
-  if(create_and_open_db(&trivia_db, db_path))
+  if((retval = create_and_open_db(&trivia_db, db_path, DB_RECNO)))
   {
-    fprintf(stderr, "Could not initialize trivia db- aborting.\n");
+    fprintf(stderr, "Could not initialize trivia db- aborting (%d).\n", retval);
+    return EXIT_FAILURE;
   }
   
 
@@ -152,10 +157,24 @@ int main(int argc, char * argv[])
     }
     else if(tok_retval == 1)
     {
+      int chars_written;
+      time_t curr_time;
+      struct tm * struct_time;
+      
       /* Send PONG in response to PING. */
       line_buffer[1] = 'O';
-      write(my_socket, line_buffer, strlen(line_buffer) - 1);
-      debug_fprintf(stderr, "PONG sent in response to PING.\n");
+      chars_written = write(my_socket, line_buffer, strlen(line_buffer));
+      if(chars_written >= 0)
+      {
+      	time(&curr_time);
+        struct_time = localtime(&curr_time);
+        debug_fprintf(stderr, "PONG sent in response to PING. (%d bytes, time: %s)", chars_written, asctime(struct_time));
+      }
+      else
+      {
+      	 fprintf(stderr, "Socket error in write() call: %s\n", strerror(errno));
+      }
+      /* debug_fprintf(stderr, "PING received... PONG not sent (debugging).\n");*/
     }
     else if(tok_retval == 0)
     {
@@ -209,7 +228,47 @@ int main(int argc, char * argv[])
             else
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, Something "\
-            	      "went wrong while registering you. Error code %d." _NL_, argv[3], nickname);
+            	      "went wrong while registering you. Error code ?." _NL_, argv[3], nickname);
+            }
+          }
+          else if(!strcmp(&irc_toks.params[1][1], "finish"))
+          {
+            sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, argv[3]);
+            sock_printf(my_socket, output_buffer, "QUIT :Chances are, I'm being worked on." _NL_);
+            done = 1;
+          }
+          else if(!strcmp(&irc_toks.params[1][1], "stats"))
+          {
+            char * user_requested;
+            int load_status;
+            USER_DB_INFO user_entry;
+            
+            if(irc_toks.num_params <= 2)
+            {
+              user_requested = nickname;
+            }
+            else
+            {
+              user_requested = irc_toks.params[2];
+            }
+            
+            /* load_status = load_user_entry(user_db, user_requested, &user_entry); */
+            load_status = -1;
+            if(load_status == 1)
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :I can't find "\
+                "%s in the database." _NL_, argv[3], user_requested);
+            }
+            else if(load_status == 0)
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Stats for %s" _NL_, argv[3], user_requested);
+              
+            }
+            else
+            {
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, "\
+                "something went wrong while requesting stats for %s." _NL_, \
+                argv[3], nickname, user_requested);
             }
           }
           /* else if */
@@ -341,16 +400,20 @@ int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz
         temp_state->buf_offset points to "next free". temp_state->buf will always
         contain the first element after the previously successfully-parsed line. */
         chars_read = read(sock, temp_state->buf_offset, (temp_state->bufsiz - used_elements));
-        if(chars_read)
+        if(chars_read > 0)
         {
           debug_fprintf(stderr, "We read something- chars_read: %u, used_elements: %u, temp_state->buf_offset: %p\n", chars_read, used_elements, temp_state->buf_offset);
           temp_state->buf_offset += chars_read;
           used_elements = temp_state->buf_offset - temp_state->buf;
         }
-        else
+        else if(chars_read == 0)
         {
           debug_fprintf(stderr, "Remote socket has closed.\n");
           remote_socket_closed = 1;
+        }
+        else
+        {
+          fprintf(stderr, "Socket error in read() call: %s\n", strerror(errno));
         }
       }
     }
@@ -499,7 +562,7 @@ int create_path(char * out_buf, const char * str_pre, const char * str_app)
   return 0;
 }
 
-int create_and_open_db(DB ** db, char * db_path)
+int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type)
 {
   int dbopen_retval;
   
@@ -509,13 +572,13 @@ int create_and_open_db(DB ** db, char * db_path)
     return -1;
   }
   
-  dbopen_retval = (* db)->open((* db), NULL, db_path, NULL, DB_BTREE, \
+  dbopen_retval = (* db)->open((* db), NULL, db_path, NULL, db_type, \
     DB_CREATE | DB_EXCL, 0644);
   
   if(dbopen_retval == EEXIST)
   {
     debug_fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
-    if((* db)->open((* db), NULL, db_path, NULL, DB_BTREE, 0, 0644))
+    if((* db)->open((* db), NULL, db_path, NULL, db_type, 0, 0644))
     {
       fprintf(stderr, "Database open failed (%s)!\n", db_path);
       return -2;

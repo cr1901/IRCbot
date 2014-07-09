@@ -24,4 +24,4 @@ typedef struct user_game_info
 int register_user(DB * db, char * nickname, char * fullname);
 int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo);
 int store_user_entry(DB * db, const USER_DB_INFO * userinfo);
-int load_user_entry(DB * db, USER_DB_INFO * userinfo);
+int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo);

@@ -8,18 +8,6 @@ vars.Add(BoolVariable('OS_ENV', 'Allow SCons to use the System Path and OS Envir
 vars.Add('CC', 'Choose your C Compiler. Defaults to DefaultEnvironment()[''CC''].', dummy_env['CC'])
 #vars.Add('CXX', 'Choose your C++ Compiler. Defaults to DefaultEnvironment()[''CXX''].', dummy_env['CXX'])
 
-"""
-DISTCC
-real    0m7.926s
-user    0m5.350s
-sys     0m0.540s
-
-WITHOUT_DISTCC
-real    0m9.474s
-user    0m7.850s
-sys     0m0.650s
-"""
-
 env = Environment(variables = vars) 
 Help(vars.GenerateHelpText(env))
 
@@ -30,13 +18,14 @@ if env['OS_ENV']:
 env['CFLAGS'] = '-Wall -Wextra'
 
 if ARGUMENTS.get('DEBUG', False):
-	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2')
+	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2 -Wno-unused-parameter'\
+		' -Wno-unused-but-set-parameter')
 	env.Append(LINKFLAGS = ' -gdwarf-2') 
 else:
-	env.Append(CFLAGS = ' -pedantic-errors -O2 -Wno-unused-parameter')
+	env.Append(CFLAGS = ' -pedantic-errors -O2')
 	env.Append(CPPDEFINES = ['NDEBUG', 'NDEBUG_MESSAGES', 'NPRINT_OUTPUT']) 
 	
-#conf = Configure(env, config_h='cc_config.h', clean=False, help=False)
+#conf = Configure(env, config_h='cc_config.h', clean=False, help=False) #Appears to be broken...
 if not env.GetOption('clean') and not env.GetOption('help'):
 	conf = Configure(env) #, clean=False, help=False)- Don't work...
 	if not conf.CheckCC():
