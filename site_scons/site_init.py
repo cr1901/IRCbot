@@ -1,12 +1,10 @@
 def CheckLibCProvidesBDB(context):
 	#Taken from man page and modified!
 	context.Message( 'Checking whether libc provides Berkeley DB... ' )
-	#lastLIBS = context.env['LIBS']
-	lastLIBPATH = context.env['LIBPATH']
-	lastCPPPATH= context.env['CPPPATH']
-	#context.env['LIBS'] = ''
-	context.env['LIBPATH'] = ''
-	context.env['CPPPATH'] = ''
+	lastLIBS = context.env.get('LIBS', '')
+	lastLIBPATH = context.env.get('LIBPATH', '')
+	lastCPPPATH= context.env.get('CPPPATH', '')
+	
 	ret = context.TryLink("""
 	#include "db.h"
 	int
