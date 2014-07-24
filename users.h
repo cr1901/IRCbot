@@ -1,5 +1,12 @@
+#include "cc_config.h"
+
 #include <sys/types.h>
-#include <db.h>
+
+#ifdef HAVE_LIBDB5
+	#include <db5/db.h>
+#else
+	#include <db.h>
+#endif
 
 
 typedef struct user_db_info

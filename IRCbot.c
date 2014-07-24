@@ -1,6 +1,5 @@
-/* POSIX headers */
-#define _POSIX_SOURCE /* Required by POSIX. */
-#define _BSD_SOURCE /* See users.c for rationale of this define. */
+#include "cc_config.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,7 +18,11 @@
 #include <errno.h>
 
 /* Library headers */
-#include <db.h>
+#ifdef HAVE_LIBDB5
+	#include <db5/db.h>
+#else
+	#include <db.h>
+#endif
 
 /* This source defines */
 #include "users.h"
@@ -291,10 +294,11 @@ int main(int argc, char * argv[])
 
 int get_a_socket_and_connect(int * sock, const char * hostname, const char * port)
 {
-  struct addrinfo * my_addrinfo, * curr_addrinfo, hints;
+  /* struct addrinfo * my_addrinfo, * curr_addrinfo, hints; */
+  struct addrinfo hints, * my_addrinfo, * curr_addrinfo;
   int retval;
 
-  memset(&hints, 0, sizeof(struct addrinfo));
+  memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
