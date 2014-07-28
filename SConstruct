@@ -57,7 +57,8 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 		#http://www.scons.org/doc/production/HTML/scons-api/SCons.SConf-pysrc.html#CheckLib- bug?
 		#conf.Define('LIBC_PROVIDES_LIBDB', 1, 'Set to 1 if the target libc provides a Berkeley DB implementation.')
 		
-	for db_lib, db_header in zip(['db', 'db5'], ['db.h', 'db5/db.h']):
+	for db_lib, db_header in zip(['db', 'db2', 'db3', 'db4', 'db5'], \
+		['db.h', 'db2/db.h', 'db3/db.h', 'db4/db.h', 'db5/db.h']):
 		if conf.CheckLibWithHeader(db_lib, db_header, 'C', autoadd=True):
 			break
 	else:
