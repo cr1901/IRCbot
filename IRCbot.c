@@ -261,8 +261,8 @@ int main(int argc, char * argv[])
               user_requested = irc_toks.params[2];
             }
             
-            /* load_status = load_user_entry(user_db, user_requested, &user_entry); */
-            load_status = -1;
+            load_status = load_user_entry(user_db, user_requested, &user_entry);
+            /* load_status = -1; */
             if(load_status == 1)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :I can't find "\
@@ -271,13 +271,17 @@ int main(int argc, char * argv[])
             else if(load_status == 0)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Stats for %s" _NL_, argv[3], user_requested);
-              
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total pts: %lu" _NL_, argv[3], user_entry.total_pts);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total q's answered: %u" _NL_, argv[3], user_entry.q_total);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Q's answered correctly: %u" _NL_, argv[3], user_entry.q_success);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Number of games: %u" _NL_, argv[3], user_entry.num_games);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :BDB User ID: %d" _NL_, argv[3], user_entry.db_id);
             }
             else
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, "\
-                "something went wrong while requesting stats for %s." _NL_, \
-                argv[3], nickname, user_requested);
+                "something went wrong while requesting stats for %s (%d)." _NL_, \
+                argv[3], nickname, user_requested, load_status);
             }
           }
           /* else if */
@@ -362,9 +366,9 @@ int read_line_from_socket(int sock, char * line_buffer, unsigned int line_bufsiz
     /* newline_loc will be at most equal to the ptr address temp_state->buf_offset - 1 */
     newline_loc = memchr(temp_state->buf, 0x0A, used_elements);
     
-    if(used_elements >= temp_state->bufsiz)
+    if(used_elements >= temp_state->bufsiz && newline_loc == NULL)
     {
-      fprintf(stderr, "Warning: Input socket buffer is full: %d\n", __LINE__);
+      fprintf(stderr, "Warning: Input socket buffer is full and no newline is present: %d\n", __LINE__);
       input_buffer_full = 1;
     }
     else

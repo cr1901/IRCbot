@@ -118,6 +118,7 @@ int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
   json_t * json_entry;
   char * json_string;
   int dbget_retval;
+  json_error_t error;
   
   memset(&key, 0, sizeof(key));
   memset(&data, 0, sizeof(data));
@@ -135,16 +136,18 @@ int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
   }
   
   json_string = data.data;
-  if((json_entry = json_loads(json_string, 0, NULL)) == NULL)
+  if((json_entry = json_loads(json_string, 0, &error)) == NULL)
   {
     return -2;
   }
   
-  if(json_unpack(json_entry, "{s, s, s, s, s, i, s, i, s, i, s, i, s, i}", "nickname", \
-    userinfo->nickname, "fullname", userinfo->fullname, "total_pts", userinfo->total_pts, \
-    "q_total", userinfo->q_total, "q_success", userinfo->q_success, "num_games", \
-    userinfo->num_games, "db_id", userinfo->db_id))
+  if(json_unpack_ex(json_entry, &error, 0, "{s: s, s: s, s: i, s: i, s: i, s: i, s: i}", "nickname", \
+    &userinfo->nickname, "fullname", &userinfo->fullname, "total_pts", &userinfo->total_pts, \
+    "q_total", &userinfo->q_total, "q_success", &userinfo->q_success, "num_games", \
+    &userinfo->num_games, "db_id", &userinfo->db_id))
   {
+    fprintf(stderr, "JSON_ERROR:\ntext: %s\nsource: %s\nline: %d\ncolumn: %d\nposition: %u\n", \
+    	    error.text, error.source, error.line, error.column, error.position);
     return -3;
   }
   /* data.data = json_string;
