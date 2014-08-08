@@ -96,6 +96,7 @@ int main(int argc, char * argv[])
   fseek(in_file, chars_parsed, SEEK_SET);
   json_qs = json_array();
   
+  file_offset = chars_parsed;
   /* create_question(in_file, input_buffer, json_qs); */
   while((chars_parsed = create_question(in_file, input_buffer, json_qs)) > 0)
   {
