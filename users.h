@@ -1,3 +1,6 @@
+#ifndef USERS_H
+#define USERS_H
+
 #include "cc_config.h"
 
 #include <sys/types.h>
@@ -38,3 +41,5 @@ int register_user(DB * db, char * nickname, char * fullname);
 int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo);
 int store_user_entry(DB * db, const USER_DB_INFO * userinfo);
 int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo);
+#endif
+

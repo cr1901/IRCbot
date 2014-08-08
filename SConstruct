@@ -71,6 +71,19 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 	
 	conf.Finish()
 
+#Repository('EPROMs') 
+#EPROMs = Glob('*#*')
 
-env.Program(Split('IRCbot.c users.c'))
-env.Program('ghdecode.c')
+
+IRCbot = env.Program(Split('IRCbot.c users.c'))
+ghdecode = env.Program('ghdecode.c')
+Default([IRCbot, ghdecode])
+
+#This is somewhat of a hack... it's better to use an Emitter...
+#Ask on mailing list why Repository sources default to NOT building in 
+#repo dir (or if this is specific to custom builders).
+#gh_questions = Builder(action = './ghdecode $SOURCE.rsrcdir/$TARGET $SOURCE', suffix='.json', single_source = True)
+#env.Append(BUILDERS = {'GHJSON' : gh_questions})
+#questions = env.GHJSON(EPROMs)
+#Alias('questions', questions)
+
