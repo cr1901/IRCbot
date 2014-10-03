@@ -42,8 +42,8 @@ int register_user(DB * db, char * nickname, char * fullname)
   new_user.nickname = nickname;
   new_user.fullname = fullname;
   new_user.total_pts = new_user.q_total= new_user.q_success= new_user.num_games= 0;
-  new_user.db_id = 0;
-  /* new_user.db_id = db_stats.bt_nkeys; */ /* Doesn't do what I want... */
+  /* new_user.db_id = 0; */
+  new_user.db_id = db_stats.bt_nkeys; /* Doesn't do what I want... */
   
   
   if((stor_retval = store_user_entry(db, &new_user)) == 1)

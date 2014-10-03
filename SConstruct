@@ -77,7 +77,7 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 #EPROMs = Glob('*#*')
 
 
-IRCbot = env.Program(Split('IRCbot.c debug.c sockwrap.c tokparse.c users.c'))
+IRCbot = env.Program(Split('IRCbot.c debug.c ircwrap.c sockwrap.c tokparse.c users.c'))
 ghdecode = env.Program('ghdecode.c')
 Default([IRCbot, ghdecode])
 

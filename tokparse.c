@@ -106,3 +106,6 @@ int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens)
   
   return 0;
 }
+
+
+/* int get_next_token(char * */

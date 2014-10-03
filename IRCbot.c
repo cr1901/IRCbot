@@ -32,6 +32,7 @@
 
 /* This source defines */
 #include "debug.h"
+#include "ircwrap.h"
 #include "sockwrap.h"
 #include "tokparse.h"
 #include "users.h"
@@ -39,15 +40,6 @@
 #define _NL_ "\r\n"
 
 /* char ** commands = { \ */
-char * commands[] = { "NICK cr1901_IRCbot" _NL_, \
-                      "USER cr1901 . . :This is a bot" _NL_, \
-                      "JOIN #higan" _NL_
-                    };
-
-char * quotes[] = { "Hello all you beautiful people :D! It's time for some trivia!\n" _NL_, \
-                  };
-
-
 
 int create_path(char * out_buf, const char * str_pre, const char * str_app);
 int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type);
@@ -114,10 +106,8 @@ int main(int argc, char * argv[])
   }
   
   
-  
-  sock_printf(my_socket, output_buffer, "USER %s . . :This is a bot programmed by William D. Jones" _NL_, argv[1]);
-  sock_printf(my_socket, output_buffer, "NICK %s" _NL_, argv[1]);
-  sock_printf(my_socket, output_buffer, "JOIN %s" _NL_, argv[3]);
+  set_credentials(my_socket, output_buffer, argv[1], argv[1]);
+  join_room(my_socket, output_buffer, argv[3]);
   /* output_buffer_size = sprintf(output_buffer, "PRIVMSG %s :!help" _NL_, argv[3]);
   write(my_socket, output_buffer, output_buffer_size); */
   
@@ -280,8 +270,6 @@ int main(int argc, char * argv[])
   trivia_db->close(trivia_db, 0);
   return EXIT_SUCCESS;
 }
-
-/* int get_next_token(char * */
 
 /* Todo... add windows version? */
 int create_path(char * out_buf, const char * str_pre, const char * str_app)
