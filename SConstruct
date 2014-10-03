@@ -2,7 +2,7 @@ import os
 
 dummy_env = DefaultEnvironment()
 
-vars = Variables()
+vars = Variables(['variables.cache', 'settings.py'])
 vars.Add(BoolVariable('DEBUG', 'Set to 1 to set Debug options.', 0))
 vars.Add(BoolVariable('OS_ENV', 'Allow SCons to use the System Path and OS Environment (useful for distcc)', 0))
 vars.Add('CC', 'Choose your C Compiler. Defaults to DefaultEnvironment()[''CC''].', dummy_env['CC'])
@@ -11,7 +11,9 @@ vars.Add(PathVariable('LIBRARY_PATH', 'Specify extra paths for linking', None))
 vars.Add(PathVariable('RUNTIME_PATH', 'Specify extra paths for runtime loading (rpath- useful for pkgsrc)', None))
 #vars.Add('CXX', 'Choose your C++ Compiler. Defaults to DefaultEnvironment()[''CXX''].', dummy_env['CXX'])
 
-env = Environment(variables = vars) 
+env = Environment(variables = vars)
+
+vars.Save('variables.cache', env)
 Help(vars.GenerateHelpText(env))
 
 if env['OS_ENV']:
@@ -27,7 +29,7 @@ if 'RUNTIME_PATH' in env:
 #env['CFLAGS'] = '-ansi -Wall -Wextra' #libdb configure test will fail.
 env['CFLAGS'] = '-Wall -Wextra'
 
-if ARGUMENTS.get('DEBUG', False):
+if env['DEBUG']:
 	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2 -Wno-unused-parameter'\
 		' -Wno-unused-but-set-parameter')
 	env.Append(LINKFLAGS = ' -gdwarf-2') 
