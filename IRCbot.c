@@ -1,13 +1,5 @@
 #include "cc_config.h"
 
-/* #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <errno.h> */
-
 /* ANSI headers */
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,7 +109,7 @@ int main(int argc, char * argv[])
     int read_retval, tok_retval;
     
     read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);
-    if(read_retval == -3)
+    if(read_retval == -3 || read_retval == -4)
     {
       done = 1;
     }
