@@ -1,0 +1,15 @@
+{
+	"default" : {
+		"server" : "irc.freenode.net",
+		"nickname" : "triviabot",
+		"user_message" : "Trivia bot. Source code available at: https://github.com/cr1901/IRCbot",
+		"ghostnick" : "trivia_ghost",
+		"password" : null,
+		"default_rooms" : null, 
+		"userdb_path" : "./users.db",
+		"triviadb_path" : "./trivia.db",
+		"next_user_id" : 0 
+	}
+}
+		
+		
