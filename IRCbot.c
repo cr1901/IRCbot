@@ -37,18 +37,19 @@
 
 int create_path(char * out_buf, const char * str_pre, const char * str_app);
 int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type);
+int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz);
 
 
 int main(int argc, char * argv[])
 {
-  sock_id my_socket, done = 0;
-  char * line_buffer, * output_buffer, * db_path;
+  sock_id my_socket;
+  int retval, done = 0; /* Generic return value used throughout. */
+  char ** buffer_array[4], * line_buffer, * output_buffer, * db_path;
   READLINE_STATE socket_buf;
   IRC_TOKENS irc_toks;
   DB * user_db, * trivia_db, * game_db;
   ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
-  int retval;
-
+  
   if(argc < 5)
   {
     fprintf(stderr, "Usage: IRCbot Bot_name server channel db_path (port 6667)\n"
@@ -56,25 +57,31 @@ int main(int argc, char * argv[])
     return EXIT_FAILURE;
   }
 
-  /* Just use BUFSIZ for now... should be more than enough (must be >= 256,
+  buffer_array[0] = &socket_buf.buf;
+  buffer_array[1] = &irc_toks.buf;
+  buffer_array[2] = &output_buffer;
+  buffer_array[3] = &line_buffer;
+  /* Just use BUFSIZ for now... should be more than enough (BUFSIZ must be >= 256,
   but I've never seen it less than 512, which is the max IRC message size. */
-  socket_buf.buf_offset = socket_buf.buf = malloc(BUFSIZ);
+  if((retval = allocate_buffers(buffer_array, (sizeof(buffer_array)/sizeof(char *)), BUFSIZ)))
+  {
+    fprintf(stderr, "Initial memory allocation failure!\n");
+    return EXIT_FAILURE;
+  }
+  
+  socket_buf.buf_offset = socket_buf.buf;
+  socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;  
+  /* socket_buf.buf_offset = socket_buf.buf = malloc(BUFSIZ);
   irc_toks.buf = malloc(BUFSIZ);
   output_buffer = malloc(BUFSIZ);
-  line_buffer = malloc(BUFSIZ);
-  socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;
+  line_buffer = malloc(BUFSIZ); */
+  
+  
   
   /* This should not fail, provided the runtime isn't broken. */
   db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
   db_path = malloc(db_path_size + 1 + 16); /* Databases shall have filenames no greater than 16 bytes, including NULL. 
   The extra character is to append*/
-  
-  if(socket_buf.buf == NULL || output_buffer == NULL || line_buffer == NULL \
-    || irc_toks.buf == NULL || db_path == NULL)
-  {
-    fprintf(stderr, "Initial memory allocation failure!\n");
-    return EXIT_FAILURE;
-  }
   
   /* fprintf(stdout, "Path was: %s.\n", db_path);
   return 0; */
@@ -192,8 +199,7 @@ int main(int argc, char * argv[])
           /* fprintf(stderr, "%s", &irc_toks.params[1][1]); */
           if(!strcmp(&irc_toks.params[1][1], "register"))
           {
-            int reg_status;
-            reg_status = register_user(user_db, nickname, irc_toks.prefix);
+            int reg_status = register_user(user_db, nickname, irc_toks.prefix);
             
             if(reg_status == 1)
             {
@@ -317,5 +323,18 @@ int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type)
     return -3;
   }
   
+  return 0;
+}
+
+int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz)
+{
+  int count = 0;
+  for(count = 0; count < num_bufs; count++)
+  {     
+    if(((* buf_ptrs[count]) = malloc(bufsiz)) == NULL)
+    {
+    	    return -1;
+    }
+  }
   return 0;
 }
