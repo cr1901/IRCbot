@@ -78,9 +78,10 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 #EPROMs = Glob('*#*')
 
 
-IRCbot = env.Program(Split('IRCbot.c debug.c ircwrap.c sockwrap.c tokparse.c users.c'))
+IRCbot = env.Program(Split('IRCbot.c dbjson.c debug.c ircwrap.c sockwrap.c tokparse.c'))
 ghdecode = env.Program('ghdecode.c')
-Default([IRCbot, ghdecode])
+trimport = env.Program('trimport.c')
+Default([IRCbot, ghdecode, trimport])
 
 #This is somewhat of a hack... it's better to use an Emitter...
 #Ask on mailing list why Repository sources default to NOT building in 

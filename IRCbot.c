@@ -33,6 +33,8 @@
 
 /* char ** commands = { \ */
 
+
+
 int create_path(char * out_buf, const char * str_pre, const char * str_app);
 int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type);
 

@@ -19,6 +19,8 @@
 #include <jansson.h>
 
 #include "debug.h"
+#include "cfgfile.h"
+#include "trivia.h"
 #include "users.h"
 
 int register_user(DB * db, char * nickname, char * fullname)
