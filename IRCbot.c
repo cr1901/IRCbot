@@ -43,7 +43,7 @@ int main(int argc, char * argv[])
   char * line_buffer, * output_buffer, * db_path;
   READLINE_STATE socket_buf;
   IRC_TOKENS irc_toks;
-  DB * user_db, * trivia_db;
+  DB * user_db, * trivia_db, * game_db;
   ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
   int retval;
 
@@ -109,9 +109,16 @@ int main(int argc, char * argv[])
     int read_retval, tok_retval;
     
     read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);
-    if(read_retval == -3 || read_retval == -4)
+    if(read_retval == -3)
     {
       done = 1;
+    }
+    else if(read_retval == -4)
+    {
+      done = 1;
+      /* Move to state switch statement. */
+      /* reconnect_using_current_state() */
+      /* display_sorry_message() */
     }
     /* num_chars_in_curr_line = (token_ptr - curr_start_pos + 1); */
     
@@ -133,7 +140,7 @@ int main(int argc, char * argv[])
       struct tm * struct_time;
       
       /* Send PONG in response to PING. */
-      /* line_buffer[1] = 'O';
+      line_buffer[1] = 'O';
       chars_written = write(my_socket, line_buffer, strlen(line_buffer));
       if(chars_written >= 0)
       {
@@ -144,8 +151,8 @@ int main(int argc, char * argv[])
       else
       {
       	 fprintf(stderr, "Socket error in write() call: %s\n", strerror(errno));
-      } */
-      debug_fprintf(stderr, "PING received... PONG not sent (debugging).\n");
+      }
+      /* debug_fprintf(stderr, "PING received... PONG not sent (debugging).\n"); */
     }
     else if(tok_retval == 0)
     {

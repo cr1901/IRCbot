@@ -5,6 +5,7 @@ typedef struct readline_state
 {
   char * buf;
   char * buf_offset;
+  char * newline_loc;
   unsigned int bufsiz;
 }READLINE_STATE;
 

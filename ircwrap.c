@@ -15,3 +15,9 @@ void join_room(sock_id sock, char * output_buffer, const char * room_name)
 {
 	sock_printf(sock, output_buffer, "JOIN %s" _NL_, room_name);
 }
+
+/* void send_message(sock_id sock, char * output_buffer, const char * recipient, const char * message)
+{
+	
+	
+} */
