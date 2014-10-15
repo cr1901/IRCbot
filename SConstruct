@@ -30,7 +30,7 @@ if 'RUNTIME_PATH' in env:
 env['CFLAGS'] = '-Wall -Wextra'
 
 if env['DEBUG']:
-	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2 -Wno-unused-parameter'\
+	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2 -Wno-long-long -Wno-unused-parameter'\
 		' -Wno-unused-but-set-parameter')
 	env.Append(LINKFLAGS = ' -gdwarf-2') 
 	env.Append(CPPDEFINES = ['NDEBUG', 'NPRINT_OUTPUT']) 
@@ -53,13 +53,15 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 		if not conf.CheckHeader(posix_header, include_quotes='<>', language='C'):
 			print 'Error: POSIX header {0} was not found in the target headers.'.format(posix_header)
 			Exit(1)
-	
+			
 	if conf.CheckLibCProvidesBDB(): #It is possible to cause a mismatch between header and library if libc provides BDB.
 		#This step is a precaution.
 		pass
 		#http://www.scons.org/doc/production/HTML/scons-api/SCons.SConf-pysrc.html#CheckLib- bug?
 		#conf.Define('LIBC_PROVIDES_LIBDB', 1, 'Set to 1 if the target libc provides a Berkeley DB implementation.')
 		
+	#This test causes the following failure with distcc:
+	#distccd[4089] (dcc_r_token_int) ERROR: read failed while waiting for token "DOTI"	
 	for db_lib, db_header in zip(['db', 'db2', 'db3', 'db4', 'db5'], \
 		['db.h', 'db2/db.h', 'db3/db.h', 'db4/db.h', 'db5/db.h']):
 		if conf.CheckLibWithHeader(db_lib, db_header, 'C', autoadd=True):
@@ -78,7 +80,7 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 #EPROMs = Glob('*#*')
 
 
-IRCbot = env.Program(Split('IRCbot.c dbjson.c debug.c ircwrap.c sockwrap.c tokparse.c'))
+IRCbot = env.Program(Split('IRCbot.c dbjson.c debug.c ircwrap.c tokparse.c'))
 ghdecode = env.Program('ghdecode.c')
 trimport = env.Program('trimport.c')
 Default([IRCbot, ghdecode, trimport])

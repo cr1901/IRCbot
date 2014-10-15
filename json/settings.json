@@ -1,6 +1,7 @@
 {
 	"default" : {
 		"server" : "irc.freenode.net",
+		"port" : 6667,
 		"nickname" : "triviabot",
 		"user_message" : "Trivia bot. Source code available at: https://github.com/cr1901/IRCbot",
 		"ghostnick" : "trivia_ghost",

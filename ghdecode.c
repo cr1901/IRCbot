@@ -156,6 +156,7 @@ int create_header(FILE * fp_in, char * buffer, json_t * json_rep)
   header_len = ((series_ptr_end + 1) - buffer) + 1;
   
   json_object_set(json_rep, "name", json_string(buffer));
+  json_object_set(json_rep, "series_id", json_string("gtsers1"));
   json_object_set(json_rep, "num_qs", json_integer(num_qs));
   json_object_set(json_rep, "jump_len", json_integer(jump_len));
   json_object_set(json_rep, "header_len", json_integer(header_len));

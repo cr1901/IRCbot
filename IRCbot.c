@@ -24,8 +24,8 @@
 
 /* This source defines */
 #include "debug.h"
+#include "cfgfile.h"
 #include "ircwrap.h"
-#include "sockwrap.h"
 #include "tokparse.h"
 #include "users.h"
 
@@ -47,12 +47,13 @@ int main(int argc, char * argv[])
   char ** buffer_array[4], * line_buffer, * output_buffer, * db_path;
   READLINE_STATE socket_buf;
   IRC_TOKENS irc_toks;
+  CFG_PARAMS cfg_file;
   DB * user_db, * trivia_db, * game_db;
   ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
   
-  if(argc < 5)
+  if(argc < 2)
   {
-    fprintf(stderr, "Usage: IRCbot Bot_name server channel db_path (port 6667)\n"
+    fprintf(stderr, "Usage: IRCbot settings_file\n"
             "Extra arguments ignored.\n");
     return EXIT_FAILURE;
   }
@@ -70,17 +71,14 @@ int main(int argc, char * argv[])
   }
   
   socket_buf.buf_offset = socket_buf.buf;
-  socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;  
-  /* socket_buf.buf_offset = socket_buf.buf = malloc(BUFSIZ);
-  irc_toks.buf = malloc(BUFSIZ);
-  output_buffer = malloc(BUFSIZ);
-  line_buffer = malloc(BUFSIZ); */
+  socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;
   
   
+  exit(0);
   
   /* This should not fail, provided the runtime isn't broken. */
-  db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
-  db_path = malloc(db_path_size + 1 + 16); /* Databases shall have filenames no greater than 16 bytes, including NULL. 
+  /* db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
+  db_path = malloc(db_path_size + 1 + 16); */ /* Databases shall have filenames no greater than 16 bytes, including NULL. 
   The extra character is to append*/
   
   /* fprintf(stdout, "Path was: %s.\n", db_path);
