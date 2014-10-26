@@ -1,5 +1,7 @@
 #include "cc_config.h"
 
+#include <errno.h> /* EEXIST */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -24,11 +26,54 @@
 #include "users.h"
 
 
+static int parse_json_null_or_string(char ** ghostnick, json_t * json_rep);
+static int parse_json_array_of_strings(char *** str_array, json_t * json_rep);
+static int create_and_open_db(DB ** db, const char * db_path, DBTYPE db_type);
+
 
 
 /* ===============================================================================
 * Config-file code
 =============================================================================== */
+int read_settings_file(const char * profile, CFG_PARAMS * cfg, const char * path)
+{
+  json_t * json_entry, * json_profile, * json_ghostnick, * json_defrooms, * json_passwd;
+  json_error_t error;
+  
+  if((json_entry = json_load_file(path, 0, &error)) == NULL)
+  {
+    return -1;
+  }
+  
+  if((json_profile = json_object_get(json_entry, profile)) == NULL)
+  {
+    return -2;
+  }
+  
+  if(json_unpack_ex(json_profile, &error, 0, CFG_FORMAT_STR, "server", \
+    &cfg->server_name, "nickname", &cfg->nickname, "user_message", &cfg->user_message, \
+    "ghostnick", &json_ghostnick, "password", &json_passwd, "userdb", &cfg->userdb_path, \
+    "triviadb", &cfg->triviadb_path, "default_rooms", &json_defrooms, \
+    "port",  &cfg->port, "next_user_id", &cfg->next_user_id))
+  {
+    fprintf(stderr, "JSON_ERROR:\ntext: %s\nsource: %s\nline: %d\ncolumn: %d\nposition: %u\n", \
+    	    error.text, error.source, error.line, error.column, error.position);
+    return -3;
+  }
+  
+  /* Now we need to fill in the remaining fields. */
+  if(parse_json_null_or_string(&cfg->ghostnick, json_ghostnick))
+  {
+    return -4;
+  }
+  
+  if(parse_json_null_or_string(&cfg->password, json_passwd))
+  {
+    return -5;
+  }
+  
+  return 0;
+}
 /* int read_settings_file(CFG_PARAMS * cfg, const char * path)
 {
 	
@@ -45,11 +90,20 @@ int write_settings_file(const CFG_PARAMS * cfg, const char * path)
 /* ===============================================================================
 * Trivia handling code
 =============================================================================== */
+int open_trivia_db(DB ** trivia_db, const char * db_path)
+{
+	return create_and_open_db(trivia_db, db_path, DB_RECNO);
+}
 
 
 /* ===============================================================================
 * User handling code
 =============================================================================== */
+int open_user_db(DB ** user_db, const char * db_path)                         
+{
+	return create_and_open_db(user_db, db_path, DB_BTREE);
+}
+
 int register_user(DB * db, char * nickname, char * fullname)
 {
   DBT key, data;
@@ -105,7 +159,7 @@ int store_user_entry(DB * db, const USER_DB_INFO * userinfo)
   char * json_string;
   int dbput_retval;
   
-  json_entry = json_pack("{s, s, s, s, s, i, s, i, s, i, s, i, s, i}", "nickname", \
+  json_entry = json_pack(USER_FORMAT_STR, "nickname", \
     userinfo->nickname, "fullname", userinfo->fullname, "total_pts", userinfo->total_pts, \
     "q_total", userinfo->q_total, "q_success", userinfo->q_success, "num_games", \
     userinfo->num_games, "db_id", userinfo->db_id);
@@ -171,7 +225,7 @@ int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
     return -2;
   }
   
-  if(json_unpack_ex(json_entry, &error, 0, "{s: s, s: s, s: i, s: i, s: i, s: i, s: i}", "nickname", \
+  if(json_unpack_ex(json_entry, &error, 0, USER_FORMAT_STR, "nickname", \
     &userinfo->nickname, "fullname", &userinfo->fullname, "total_pts", &userinfo->total_pts, \
     "q_total", &userinfo->q_total, "q_success", &userinfo->q_success, "num_games", \
     &userinfo->num_games, "db_id", &userinfo->db_id))
@@ -186,3 +240,76 @@ int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
   
   return 0;
 }
+
+/* ===============================================================================
+* Static functions
+=============================================================================== */
+
+/* Certain fields can be json strings or null. Either works, so parse accordingly. */
+int parse_json_null_or_string(char ** str_rep, json_t * json_rep)
+{
+    (* str_rep) = NULL; /* Assume NULL. */
+    if(json_unpack(json_rep, "n") && json_unpack(json_rep, "s", str_rep))
+    {
+      /* Both validations failed if we got here. str_rep will be allocated/set 
+      appropriately as a side effect. */
+      return -1;
+    }
+    else
+    {
+      return 0;
+    }
+}
+
+int parse_json_array_of_strings(char *** str_array, json_t * json_rep)
+{
+  if(!json_is_array(json_rep))
+  {
+    return -1;
+  }
+  else
+  {
+    size_t index;
+    json_t * value;
+    /* The retuned value is read-only and must not be modified or freed by the 
+    user. It is valid as long as string exists, i.e. as long as its reference 
+    count has not dropped to zero. */
+    /* Be wary of this code... */
+    (* str_array) = NULL;
+    
+    return 0;
+  }
+	
+}
+
+
+int create_and_open_db(DB ** db, const char * db_path, DBTYPE db_type)
+{
+  int dbopen_retval;
+  
+  if(db_create(db, NULL, 0))
+  {
+    fprintf(stderr, "dbcreate (%s) has failed!\n", db_path);
+    return -1;
+  }
+  
+  dbopen_retval = (* db)->open((* db), NULL, db_path, NULL, db_type, \
+    DB_CREATE | DB_EXCL, 0644);
+  
+  if(dbopen_retval == EEXIST)
+  {
+    debug_fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
+    if((* db)->open((* db), NULL, db_path, NULL, db_type, 0, 0644))
+    {
+      fprintf(stderr, "Database open failed (%s)!\n", db_path);
+      return -2;
+    }
+  }
+  else if(dbopen_retval != 0)
+  {
+    return -3;
+  }
+  
+  return 0;
+}
+

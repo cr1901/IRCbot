@@ -22,6 +22,8 @@
 	#include <db.h>
 #endif
 
+#include <jansson.h>
+
 /* This source defines */
 #include "debug.h"
 #include "cfgfile.h"
@@ -36,9 +38,7 @@
 
 
 int create_path(char * out_buf, const char * str_pre, const char * str_app);
-int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type);
-int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz);
-
+static int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz);
 
 int main(int argc, char * argv[])
 {
@@ -73,6 +73,17 @@ int main(int argc, char * argv[])
   socket_buf.buf_offset = socket_buf.buf;
   socket_buf.bufsiz = irc_toks.bufsiz = BUFSIZ;
   
+  if(read_settings_file("default", &cfg_file, argv[1]))
+  {
+    fprintf(stderr, "Failed to read settings file!\n");
+    return EXIT_FAILURE;
+  }
+  
+  printf("%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %i\n%s: %i\n", "server", \
+    cfg_file.server_name, "nickname", cfg_file.nickname, "user_message", cfg_file.user_message, \
+    "ghostnick", cfg_file.ghostnick, "password", cfg_file.password, "userdb", cfg_file.userdb_path, \
+    "triviadb", cfg_file.triviadb_path, "default_rooms", "", \
+    "port",  cfg_file.port, "next_user_id", cfg_file.next_user_id);
   
   exit(0);
   
@@ -83,7 +94,9 @@ int main(int argc, char * argv[])
   
   /* fprintf(stdout, "Path was: %s.\n", db_path);
   return 0; */
-  create_path(db_path, argv[4], "users.db");
+  
+  /* Defer until we receive an invite to a room. */
+/*  create_path(db_path, argv[4], "users.db");
   if((retval = create_and_open_db(&user_db, db_path, DB_BTREE)))
   {
     fprintf(stderr, "Could not initialize user db- aborting (%d).\n", retval);
@@ -95,7 +108,7 @@ int main(int argc, char * argv[])
   {
     fprintf(stderr, "Could not initialize trivia db- aborting (%d).\n", retval);
     return EXIT_FAILURE;
-  }
+  } */
   
 
   if(get_a_socket_and_connect(&my_socket, argv[2], "6667"))
@@ -294,36 +307,6 @@ int create_path(char * out_buf, const char * str_pre, const char * str_app)
   return 0;
 }
 
-int create_and_open_db(DB ** db, char * db_path, DBTYPE db_type)
-{
-  int dbopen_retval;
-  
-  if(db_create(db, NULL, 0))
-  {
-    fprintf(stderr, "dbcreate (%s) has failed!\n", db_path);
-    return -1;
-  }
-  
-  dbopen_retval = (* db)->open((* db), NULL, db_path, NULL, db_type, \
-    DB_CREATE | DB_EXCL, 0644);
-  
-  if(dbopen_retval == EEXIST)
-  {
-    debug_fprintf(stderr, "Database exists... using existing version (%s).\n", db_path);
-    if((* db)->open((* db), NULL, db_path, NULL, db_type, 0, 0644))
-    {
-      fprintf(stderr, "Database open failed (%s)!\n", db_path);
-      return -2;
-    }
-  }
-  else if(dbopen_retval != 0)
-  {
-    return -3;
-  }
-  
-  return 0;
-}
-
 int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz)
 {
   int count = 0;
@@ -336,3 +319,4 @@ int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz)
   }
   return 0;
 }
+

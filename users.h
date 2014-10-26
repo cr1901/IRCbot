@@ -36,7 +36,10 @@ typedef struct user_game_info
   unsigned char curr_q_success; 
   unsigned short int curr_pts;
 }USER_GAME_INFO;
-  
+
+#define USER_FORMAT_STR "{s: s, s: s, s: i, s: i, s: i, s: i, s: i}"
+
+int open_user_db(DB ** user_db, const char * db_path);
 int register_user(DB * db, char * nickname, char * fullname);
 int join_game(DB * db, char * nickname, USER_GAME_INFO * gameinfo);
 int store_user_entry(DB * db, const USER_DB_INFO * userinfo);

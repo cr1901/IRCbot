@@ -4,11 +4,11 @@
 		"port" : 6667,
 		"nickname" : "triviabot",
 		"user_message" : "Trivia bot. Source code available at: https://github.com/cr1901/IRCbot",
-		"ghostnick" : "trivia_ghost",
+		"ghostnick" : null,
 		"password" : null,
-		"default_rooms" : null, 
-		"userdb_path" : "./users.db",
-		"triviadb_path" : "./trivia.db",
+		"default_rooms" : [], 
+		"userdb" : "./users.db",
+		"triviadb" : "./trivia.db",
 		"next_user_id" : 0 
 	}
 }

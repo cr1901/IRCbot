@@ -21,7 +21,9 @@ typedef struct trivia_db
 	ptrdiff_t header_length;
 	ptrdiff_t jump_table_length;
 	unsigned short num_questions;
-}TRIVIA_DB;	
+}TRIVIA_DB;
+
+int open_trivia_db(DB ** trivia_db, const char * db_path);
 
 #endif
 

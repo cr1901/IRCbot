@@ -213,6 +213,38 @@ int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bu
   return readline_retval;
 }
 
+
+/* 1- PING received. Respond with PONG and call discard routine again.
+0- No error, input discarded.
+-1- Remote closed socket.
+-2- EAGAIN not received. */
+int discard_received_input(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state)
+{
+  int read_retval;
+  while((read_retval = read(sock, temp_state->buf_offset, temp_state->bufsiz)) > 0)
+  {
+    
+  }
+  
+  /* No matter what happens, the readline state is invalidated. */
+  memset(temp_state->buf, '\0', temp_state->bufsiz);
+  temp_state->buf_offset = temp_state->buf;
+  temp_state->newline_loc = NULL;
+  
+  if(read_retval == 0)
+  {
+    return -1;
+  }
+  else if(errno == EAGAIN)
+  {
+    return 0;
+  }
+  else
+  {
+    return -2;
+  }
+}
+
 int sock_printf(sock_id sock, char * buff, const char * fmt, ...)
 {
   int buff_size;
