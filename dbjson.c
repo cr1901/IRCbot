@@ -45,12 +45,13 @@ int read_settings_file(const char * profile, CFG_PARAMS * cfg, const char * path
     return -1;
   }
   
-  if((json_profile = json_object_get(json_entry, profile)) == NULL)
+  if((cfg->json_profile_rep = json_object_get(json_entry, profile)) == NULL)
   {
+    json_decref(json_entry);
     return -2;
   }
   
-  if(json_unpack_ex(json_profile, &error, 0, CFG_FORMAT_STR, "server", \
+  if(json_unpack_ex(cfg->json_profile_rep, &error, 0, CFG_FORMAT_STR, "server", \
     &cfg->server_name, "nickname", &cfg->nickname, "user_message", &cfg->user_message, \
     "ghostnick", &json_ghostnick, "password", &json_passwd, "userdb", &cfg->userdb_path, \
     "triviadb", &cfg->triviadb_path, "default_rooms", &json_defrooms, \
@@ -58,19 +59,29 @@ int read_settings_file(const char * profile, CFG_PARAMS * cfg, const char * path
   {
     fprintf(stderr, "JSON_ERROR:\ntext: %s\nsource: %s\nline: %d\ncolumn: %d\nposition: %u\n", \
     	    error.text, error.source, error.line, error.column, error.position);
+    json_decref(json_entry);
     return -3;
   }
   
   /* Now we need to fill in the remaining fields. */
   if(parse_json_null_or_string(&cfg->ghostnick, json_ghostnick))
   {
+    json_decref(json_entry);	  
     return -4;
   }
   
   if(parse_json_null_or_string(&cfg->password, json_passwd))
   {
+    json_decref(json_entry);
     return -5;
   }
+  
+  /* We want to keep a reference to the current profile being used. */
+  json_incref(cfg->json_profile_rep);
+  /* If we got here, we can safely get rid of the root json_entry. json_ghostnick,
+  json_defrooms, and json_passwd are not leaked, as they are reachable from 
+  cfg->json_profile_rep. */
+  json_decref(json_entry);
   
   return 0;
 }
@@ -92,7 +103,7 @@ int write_settings_file(const CFG_PARAMS * cfg, const char * path)
 =============================================================================== */
 int open_trivia_db(DB ** trivia_db, const char * db_path)
 {
-	return create_and_open_db(trivia_db, db_path, DB_RECNO);
+  return create_and_open_db(trivia_db, db_path, DB_RECNO);
 }
 
 
@@ -101,7 +112,7 @@ int open_trivia_db(DB ** trivia_db, const char * db_path)
 =============================================================================== */
 int open_user_db(DB ** user_db, const char * db_path)                         
 {
-	return create_and_open_db(user_db, db_path, DB_BTREE);
+  return create_and_open_db(user_db, db_path, DB_BTREE);
 }
 
 int register_user(DB * db, char * nickname, char * fullname)
@@ -170,6 +181,7 @@ int store_user_entry(DB * db, const USER_DB_INFO * userinfo)
   
   if((json_string = json_dumps(json_entry, JSON_COMPACT)) == NULL)
   {
+    json_decref(json_entry);
     return -2;
   }
   
@@ -183,15 +195,18 @@ int store_user_entry(DB * db, const USER_DB_INFO * userinfo)
   
   if((dbput_retval = db->put(db, NULL, &key, &data, DB_NOOVERWRITE)) == DB_KEYEXIST)
   {
+    json_decref(json_entry);
     free(json_string);
     return 1;
   }
   else if(dbput_retval)
   {
+    json_decref(json_entry);
     free(json_string);  
     return -3;
   }
   
+  json_decref(json_entry);
   free(json_string);
   return 0;		
 }
@@ -220,18 +235,19 @@ int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
   }
   
   json_string = data.data;
-  if((json_entry = json_loads(json_string, 0, &error)) == NULL)
+  if((userinfo->json_rep = json_loads(json_string, 0, &error)) == NULL)
   {
     return -2;
   }
   
-  if(json_unpack_ex(json_entry, &error, 0, USER_FORMAT_STR, "nickname", \
+  if(json_unpack_ex(userinfo->json_rep, &error, 0, USER_FORMAT_STR, "nickname", \
     &userinfo->nickname, "fullname", &userinfo->fullname, "total_pts", &userinfo->total_pts, \
     "q_total", &userinfo->q_total, "q_success", &userinfo->q_success, "num_games", \
     &userinfo->num_games, "db_id", &userinfo->db_id))
   {
     fprintf(stderr, "JSON_ERROR:\ntext: %s\nsource: %s\nline: %d\ncolumn: %d\nposition: %u\n", \
     	    error.text, error.source, error.line, error.column, error.position);
+    json_decref(userinfo->json_rep);
     return -3;
   }
   /* data.data = json_string;

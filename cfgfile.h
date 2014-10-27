@@ -6,6 +6,7 @@
 typedef struct cfg_params
 {
 	/* char * cfgfile_name; */
+	json_t * json_profile_rep;
 	char * server_name;
 	char * nickname;
 	char * user_message;

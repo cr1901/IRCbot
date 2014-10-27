@@ -17,9 +17,11 @@
 	#include <db.h>
 #endif
 
+#include <jansson.h>
 
 typedef struct user_db_info
 {
+  json_t * json_rep; /* Need to be able to free the json structure. */
   char * nickname;
   char * fullname;
   unsigned long int total_pts;

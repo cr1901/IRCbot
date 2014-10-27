@@ -2,12 +2,13 @@
 #define TRIVIA_H
 
 #include "cc_config.h"
-
 #include <stddef.h>
 
+#include <jansson.h>
 
 typedef struct trivia_q
 {
+	json_t * json_rep;
 	char * question;
 	unsigned char num_answers;
 	char ** possible_answers;
@@ -17,6 +18,7 @@ typedef struct trivia_q
 
 typedef struct trivia_db
 {
+	json_t * json_rep;
 	char * name;
 	ptrdiff_t header_length;
 	ptrdiff_t jump_table_length;
