@@ -5,8 +5,9 @@
 
 typedef struct cfg_params
 {
-	/* char * cfgfile_name; */
-	json_t * json_profile_rep;
+	json_t * json_profile_rep; /* We need to keep a ptr to free later. */
+	const char * cfgfile_path; /* Where are the cfgfile params stored? */
+	const char * profile_name; /* Key to the current profile being used. */
 	char * server_name;
 	char * nickname;
 	char * user_message;

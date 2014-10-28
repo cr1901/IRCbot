@@ -6,18 +6,7 @@
 #include <string.h>
 
 /* Library headers */
-#ifdef HAVE_LIBDB5
-	#include <db5/db.h>
-#elif defined HAVE_LIBDB4
-	#include <db4/db.h>
-#elif defined HAVE_LIBDB3
-	#include <db3/db.h>
-#elif defined HAVE_LIBDB2
-	#include <db2/db.h>	
-#else
-	#include <db.h>
-#endif
-
+#include <db5/db.h>
 #include <jansson.h>
 
 #include "debug.h"
@@ -37,8 +26,12 @@ static int create_and_open_db(DB ** db, const char * db_path, DBTYPE db_type);
 =============================================================================== */
 int read_settings_file(const char * profile, CFG_PARAMS * cfg, const char * path)
 {
-  json_t * json_entry, * json_profile, * json_ghostnick, * json_defrooms, * json_passwd;
+  json_t * json_entry, * json_ghostnick, * json_defrooms, * json_passwd;
   json_error_t error;
+  
+  
+  cfg->cfgfile_path = path;
+  cfg->profile_name = profile;
   
   if((json_entry = json_load_file(path, 0, &error)) == NULL)
   {
@@ -214,7 +207,7 @@ int store_user_entry(DB * db, const USER_DB_INFO * userinfo)
 int load_user_entry(DB * db, char * nickname, USER_DB_INFO * userinfo)
 {
   DBT key, data;	
-  json_t * json_entry;
+  /* json_t * json_entry; */
   char * json_string;
   int dbget_retval;
   json_error_t error;
@@ -285,8 +278,8 @@ int parse_json_array_of_strings(char *** str_array, json_t * json_rep)
   }
   else
   {
-    size_t index;
-    json_t * value;
+    /* size_t index;
+    json_t * value; */
     /* The retuned value is read-only and must not be modified or freed by the 
     user. It is valid as long as string exists, i.e. as long as its reference 
     count has not dropped to zero. */

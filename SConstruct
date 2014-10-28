@@ -62,8 +62,8 @@ if not env.GetOption('clean') and not env.GetOption('help'):
 		
 	#This test causes the following failure with distcc:
 	#distccd[4089] (dcc_r_token_int) ERROR: read failed while waiting for token "DOTI"	
-	for db_lib, db_header in zip(['db', 'db2', 'db3', 'db4', 'db5'], \
-		['db.h', 'db2/db.h', 'db3/db.h', 'db4/db.h', 'db5/db.h']):
+	for db_lib, db_header in zip(['db5'], \
+		['db5/db.h']):
 		if conf.CheckLibWithHeader(db_lib, db_header, 'C', autoadd=True):
 			break
 	else:
