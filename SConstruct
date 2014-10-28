@@ -33,7 +33,7 @@ if env['DEBUG']:
 	env.Append(CFLAGS = ' -pedantic -O0 -gdwarf-2 -Wno-long-long -Wno-unused-parameter'\
 		' -Wno-unused-but-set-parameter')
 	env.Append(LINKFLAGS = ' -gdwarf-2') 
-	env.Append(CPPDEFINES = ['NDEBUG', 'NPRINT_OUTPUT']) 
+	env.Append(CPPDEFINES = []) 
 else:
 	env.Append(CFLAGS = ' -pedantic -O2')
 	env.Append(CPPDEFINES = ['NDEBUG', 'NDEBUG_MESSAGES', 'NPRINT_OUTPUT']) 

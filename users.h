@@ -5,18 +5,7 @@
 
 #include <sys/types.h>
 
-#ifdef HAVE_LIBDB5
-	#include <db5/db.h>
-#elif defined HAVE_LIBDB4
-	#include <db4/db.h>
-#elif defined HAVE_LIBDB3
-	#include <db3/db.h>
-#elif defined HAVE_LIBDB2
-	#include <db2/db.h>	
-#else
-	#include <db.h>
-#endif
-
+#include <db5/db.h>
 #include <jansson.h>
 
 typedef struct user_db_info

@@ -17,6 +17,7 @@
 #include "cfgfile.h"
 #include "ircwrap.h"
 #include "tokparse.h"
+#include "trivia.h"
 #include "users.h"
 
 #define _NL_ "\r\n"
@@ -73,7 +74,7 @@ int main(int argc, char * argv[])
     "triviadb", cfg_file.triviadb_path, "default_rooms", "", \
     "port",  cfg_file.port, "next_user_id", cfg_file.next_user_id);
   
-  exit(0);
+  /* exit(0); */
   
   /* This should not fail, provided the runtime isn't broken. */
   /* db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
@@ -84,30 +85,30 @@ int main(int argc, char * argv[])
   return 0; */
   
   /* Defer until we receive an invite to a room. */
-/*  create_path(db_path, argv[4], "users.db");
-  if((retval = create_and_open_db(&user_db, db_path, DB_BTREE)))
+/*  create_path(db_path, argv[4], "users.db"); */
+  if((retval = open_user_db(&user_db, cfg_file.userdb_path)))
   {
     fprintf(stderr, "Could not initialize user db- aborting (%d).\n", retval);
     return EXIT_FAILURE;
   }
   
-  create_path(db_path, argv[4], "trivia.db");
-  if((retval = create_and_open_db(&trivia_db, db_path, DB_RECNO)))
+  /* create_path(db_path, argv[4], "trivia.db"); */
+  if((retval = open_trivia_db(&trivia_db, cfg_file.triviadb_path)))
   {
     fprintf(stderr, "Could not initialize trivia db- aborting (%d).\n", retval);
     return EXIT_FAILURE;
-  } */
+  }
   
 
-  if(get_a_socket_and_connect(&my_socket, argv[2], "6667"))
+  if(get_a_socket_and_connect(&my_socket, cfg_file.server_name, "6667"))
   {
     fprintf(stderr, "Could not connect- aborting.\n");
     return EXIT_FAILURE;
   }
   
   
-  set_credentials(my_socket, output_buffer, argv[1], argv[1]);
-  join_room(my_socket, output_buffer, argv[3]);
+  set_credentials(my_socket, output_buffer, cfg_file.nickname, cfg_file.nickname);
+  /* join_room(my_socket, output_buffer, argv[3]); */
   /* output_buffer_size = sprintf(output_buffer, "PRIVMSG %s :!help" _NL_, argv[3]);
   write(my_socket, output_buffer, output_buffer_size); */
   
@@ -188,9 +189,18 @@ int main(int argc, char * argv[])
       }
       
       /* Is this a Private Message for the bot or room? */
-      if(!strcmp(irc_toks.command, "PRIVMSG") && \
-        (!strcmp(irc_toks.params[0], argv[3]) || !strcmp(irc_toks.params[0], argv[1])))
+      if(!strcmp(irc_toks.command, "PRIVMSG"))
       {
+      	char * msg_recipient;
+      	if(!strcmp(irc_toks.params[0], cfg_file.nickname))
+      	{
+      	  msg_recipient = nickname;
+      	}
+      	else
+      	{
+      	  msg_recipient = irc_toks.params[0];
+      	}
+      	
         /* There is a command being sent... */
         if(irc_toks.params[1][0] == '%')
         {
@@ -203,22 +213,22 @@ int main(int argc, char * argv[])
             if(reg_status == 1)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :The user DB says "\
-              	      "I have already registered you, %s." _NL_, argv[3], nickname);
+              	      "I have already registered you, %s." _NL_, msg_recipient, nickname);
             }
             else if(reg_status == 0)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Okay %s, I "\
-            	      "have registered you into the user DB." _NL_, argv[3], nickname);
+            	      "have registered you into the user DB." _NL_, msg_recipient, nickname);
             }
             else
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, Something "\
-            	      "went wrong while registering you. Error code ?." _NL_, argv[3], nickname);
+            	      "went wrong while registering you. Error code ?." _NL_, msg_recipient, nickname);
             }
           }
           else if(!strcmp(&irc_toks.params[1][1], "finish"))
           {
-            sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, argv[3]);
+            sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, msg_recipient);
             sock_printf(my_socket, output_buffer, "QUIT :Chances are, I'm being worked on." _NL_);
             done = 1;
           }
@@ -242,31 +252,35 @@ int main(int argc, char * argv[])
             if(load_status == 1)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :I can't find "\
-                "%s in the database." _NL_, argv[3], user_requested);
+                "%s in the database." _NL_, msg_recipient, user_requested);
             }
             else if(load_status == 0)
             {
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Stats for %s" _NL_, argv[3], user_requested);
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total pts: %lu" _NL_, argv[3], user_entry.total_pts);
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total q's answered: %u" _NL_, argv[3], user_entry.q_total);
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Q's answered correctly: %u" _NL_, argv[3], user_entry.q_success);
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Number of games: %u" _NL_, argv[3], user_entry.num_games);
-              sock_printf(my_socket, output_buffer, "PRIVMSG %s :BDB User ID: %d" _NL_, argv[3], user_entry.db_id);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Stats for %s" _NL_, msg_recipient, user_requested);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total pts: %lu" _NL_, msg_recipient, user_entry.total_pts);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Total q's answered: %u" _NL_, msg_recipient, user_entry.q_total);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Q's answered correctly: %u" _NL_, msg_recipient, user_entry.q_success);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :Number of games: %u" _NL_, msg_recipient, user_entry.num_games);
+              sock_printf(my_socket, output_buffer, "PRIVMSG %s :BDB User ID: %d" _NL_, msg_recipient, user_entry.db_id);
             }
             else
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry %s, "\
                 "something went wrong while requesting stats for %s (%d)." _NL_, \
-                argv[3], nickname, user_requested, load_status);
+                msg_recipient, nickname, user_requested, load_status);
             }
           }
           /* else if */
           else
           {
             sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
-            	      "didn't understand the command." _NL_, argv[3], nickname);
+            	      "didn't understand the command." _NL_, msg_recipient, nickname);
           }
         }
+      }
+      else if(!strcmp(irc_toks.command, "INVITE"))
+      {
+        join_room(my_socket, output_buffer, irc_toks.params[1]);
       }
     }
   }

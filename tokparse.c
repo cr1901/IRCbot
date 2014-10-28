@@ -70,7 +70,9 @@ int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens)
     while(!done_parsing_params)
     {
       /* A param with a leading colon should be parsed to the end of the
-      IRC line. */
+      IRC line. The colon is optional is all 15 params have been used (and
+      parsing to end of line should still occur). This latter case is currently
+      not implemented. */
       if((* param_begin) == ':')
       {
         param_begin++;

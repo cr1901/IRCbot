@@ -4,6 +4,7 @@
 #include "cc_config.h"
 #include <stddef.h>
 
+#include <db5/db.h>
 #include <jansson.h>
 
 typedef struct trivia_q
