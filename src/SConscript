@@ -1,0 +1,6 @@
+Import(['env'])
+
+IRCbot = env.Program(Split('IRCbot.c dbjson.c debug.c events.c ircwrap.c tokparse.c'))
+ghdecode = env.Program('ghdecode.c')
+trimport = env.Program('trimport.c')
+Default([IRCbot, ghdecode, trimport])
