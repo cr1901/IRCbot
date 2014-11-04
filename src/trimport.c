@@ -21,10 +21,16 @@ advantage of being able to store multiple DBs in a single file. */
 
 #include <jansson.h>
 
+#include "trivia.h"
+
 static void print_usage();
+static int add_qs_to_db(const char * db_path, const char * qs_path);
 
 int main(int argc, char * argv[])
 {
+  DB * trivia_db;
+  int count;
+  
   if(argc < 3)
   {
     print_usage();
@@ -32,12 +38,34 @@ int main(int argc, char * argv[])
   }
   
   
+  for(count = 2; count < argc; count++)
+  {
+    if(add_qs_to_db(argv[1], argv[count]))
+    {
+      return EXIT_FAILURE;
+    }
+  }  
   
   return EXIT_SUCCESS;
 }
 
 static void print_usage()
 {
-  fprintf(stderr, "Usage: trimport db_file_out json_file_in\n"
-    "Extra arguments ignored.\n");
+  fprintf(stderr, "Usage: trimport db_file_out json_file_in [json_file_in]\n");
+}
+
+
+int add_qs_to_db(const char * db_path, const char * qs_path)
+{
+  DB * trivia_db;
+  json_t * json_rep;
+  
+  if(open_trivia_db(&trivia_db, db_path) < 0)
+  {
+  	  return -1;
+  }
+  
+  /* if(
+  */
+  
 }

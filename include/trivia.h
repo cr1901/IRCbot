@@ -27,6 +27,7 @@ typedef struct trivia_db
 }TRIVIA_DB;
 
 int open_trivia_db(DB ** trivia_db, const char * db_path);
+/* trivia_q * get_trivia_question(DB * trivia_db); */
 
 #endif
 
