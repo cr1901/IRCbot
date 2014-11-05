@@ -1,6 +1,8 @@
 #ifndef TOKPARSE_H
 #define TOKPARSE_H
 
+#define BOT_COMMAND_PREFIX '%'
+
 typedef struct irc_tokens
 {
   char * buf;

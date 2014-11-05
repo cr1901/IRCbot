@@ -14,6 +14,7 @@
 
 /* This source defines */
 #include "debug.h"
+#include "events.h"
 #include "cfgfile.h"
 #include "ircwrap.h"
 #include "tokparse.h"
@@ -68,24 +69,6 @@ int main(int argc, char * argv[])
     return EXIT_FAILURE;
   }
   
-  printf("%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %i\n%s: %i\n", "server", \
-    cfg_file.server_name, "nickname", cfg_file.nickname, "user_message", cfg_file.user_message, \
-    "ghostnick", cfg_file.ghostnick, "password", cfg_file.password, "userdb", cfg_file.userdb_path, \
-    "triviadb", cfg_file.triviadb_path, "default_rooms", "", \
-    "port",  cfg_file.port, "next_user_id", cfg_file.next_user_id);
-  
-  /* exit(0); */
-  
-  /* This should not fail, provided the runtime isn't broken. */
-  /* db_path_size = strrchr(argv[4], '\0') - argv[4] + 1;
-  db_path = malloc(db_path_size + 1 + 16); */ /* Databases shall have filenames no greater than 16 bytes, including NULL. 
-  The extra character is to append*/
-  
-  /* fprintf(stdout, "Path was: %s.\n", db_path);
-  return 0; */
-  
-  /* Defer until we receive an invite to a room. */
-/*  create_path(db_path, argv[4], "users.db"); */
   if((retval = open_user_db(&user_db, cfg_file.userdb_path)))
   {
     fprintf(stderr, "Could not initialize user db- aborting (%d).\n", retval);
@@ -116,8 +99,64 @@ int main(int argc, char * argv[])
   while(!done)
   {
     int read_retval, tok_retval;
+    IRC_EVENTS curr_event;
+   char * msg_recipient;
+    char nickname[17] = {'\0'};
+    ptrdiff_t nickname_len;
+    int count = 0;
     
-    read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);
+    
+    curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks);
+    
+    /* fprintf(stderr, "Origin: %s, Command: %s, Num Params: %u\nParams:\n", \
+    	      irc_toks.prefix, irc_toks.command, irc_toks.num_params);
+    
+    for(count = 0; count < irc_toks.num_params; count++)
+    {
+    	fprintf(stderr, "%d: %s ", count, irc_toks.params[count]);
+    }
+    fputs("\n", stderr); */
+    
+    /* Refactor from here... */
+    nickname_len = strchr(irc_toks.prefix, '!') - irc_toks.prefix;
+    if(nickname_len < 17 && nickname_len >= 0)
+    {
+      strncpy(nickname, irc_toks.prefix, nickname_len);
+    }
+    else
+    {
+      strcpy(nickname, "NULL");
+    }
+    
+    if(!strcmp(irc_toks.params[0], cfg_file.nickname))
+    {
+      msg_recipient = nickname;
+    }
+    else
+    {
+      msg_recipient = irc_toks.params[0];
+    }
+    /* To here... */
+    
+    
+    if(curr_event == INVITE)
+    {
+      fprintf(stderr, "Invite received from: %s\n", irc_toks.params[1]);
+      join_room(my_socket, output_buffer, irc_toks.params[1]);
+    }
+    else if(curr_event == COMMAND_QUIT)
+    {
+      sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, msg_recipient);
+      sock_printf(my_socket, output_buffer, "QUIT :Chances are, I'm being worked on." _NL_);
+      done = 1;    
+    }
+    else if(curr_event == COMMAND_BAD)
+    {
+    	sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
+    	  "didn't understand the command." _NL_, msg_recipient, nickname);    
+    }
+    
+    /* read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);
     if(read_retval == -3)
     {
       done = 1;
@@ -125,11 +164,10 @@ int main(int argc, char * argv[])
     else if(read_retval == -4)
     {
       done = 1;
-      /* Move to state switch statement. */
-      /* reconnect_using_current_state() */
-      /* display_sorry_message() */
-    }
-    /* num_chars_in_curr_line = (token_ptr - curr_start_pos + 1); */
+      // Move to state switch statement.
+      // reconnect_using_current_state()
+      // display_sorry_message()
+    } 
     
     #ifndef NPRINT_OUTPUT
     write(0, line_buffer, strlen(line_buffer));
@@ -146,10 +184,10 @@ int main(int argc, char * argv[])
     {
       int chars_written;
       time_t curr_time;
-      struct tm * struct_time;
+      struct tm * struct_time; */
       
       /* Send PONG in response to PING. */
-      line_buffer[1] = 'O';
+      /* line_buffer[1] = 'O';
       chars_written = write(my_socket, line_buffer, strlen(line_buffer));
       if(chars_written >= 0)
       {
@@ -161,22 +199,19 @@ int main(int argc, char * argv[])
       {
       	 fprintf(stderr, "Socket error in write() call: %s\n", strerror(errno));
       }
-      /* debug_fprintf(stderr, "PING received... PONG not sent (debugging).\n"); */
     }
     else if(tok_retval == 0)
     {
-      /* Will strncat work instead of zero-ing each time this variable comes 
-      into scope? */
-      char nickname[17] = {'\0'}; /* If you need more chars than this, change it! */
+      char nickname[17] = {'\0'};
       ptrdiff_t nickname_len;
-      /* int count = 0;
+      int count = 0;
       fprintf(stderr, "Origin: %s, Command: %s, Num Params: %u\nParams:\n", \
       	      irc_toks.prefix, irc_toks.command, irc_toks.num_params);
       for(count = 0; count < irc_toks.num_params; count++)
       {
       	fprintf(stderr, "%d: %s ", count, irc_toks.params[count]);
       }
-      fputs("\n", stderr); */
+      fputs("\n", stderr);
       
       nickname_len = strchr(irc_toks.prefix, '!') - irc_toks.prefix;
       if(nickname_len < 17 && nickname_len >= 0)
@@ -188,7 +223,6 @@ int main(int argc, char * argv[])
       	strcpy(nickname, "NULL");
       }
       
-      /* Is this a Private Message for the bot or room? */
       if(!strcmp(irc_toks.command, "PRIVMSG"))
       {
       	char * msg_recipient;
@@ -201,11 +235,8 @@ int main(int argc, char * argv[])
       	  msg_recipient = irc_toks.params[0];
       	}
       	
-        /* There is a command being sent... */
         if(irc_toks.params[1][0] == '%')
         {
-          /* Check if the command matches... */
-          /* fprintf(stderr, "%s", &irc_toks.params[1][1]); */
           if(!strcmp(&irc_toks.params[1][1], "register"))
           {
             int reg_status = register_user(user_db, nickname, irc_toks.prefix);
@@ -248,7 +279,6 @@ int main(int argc, char * argv[])
             }
             
             load_status = load_user_entry(user_db, user_requested, &user_entry);
-            /* load_status = -1; */
             if(load_status == 1)
             {
               sock_printf(my_socket, output_buffer, "PRIVMSG %s :I can't find "\
@@ -270,7 +300,6 @@ int main(int argc, char * argv[])
                 msg_recipient, nickname, user_requested, load_status);
             }
           }
-          /* else if */
           else
           {
             sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
@@ -282,31 +311,13 @@ int main(int argc, char * argv[])
       {
         join_room(my_socket, output_buffer, irc_toks.params[1]);
       }
-    }
+    } */
   }
   
   close(my_socket);
   user_db->close(user_db, 0);
   trivia_db->close(trivia_db, 0);
   return EXIT_SUCCESS;
-}
-
-/* Todo... add windows version? */
-int create_path(char * out_buf, const char * str_pre, const char * str_app)
-{
-  int str_pre_len;
-  
-  str_pre_len = strlen(str_pre);
-  if(str_pre[str_pre_len - 1] == '/')
-  {
-    sprintf(out_buf, "%s%s", str_pre, str_app);
-  }
-  else
-  {
-    sprintf(out_buf, "%s/%s", str_pre, str_app);
-  }
-  
-  return 0;
 }
 
 int allocate_buffers(char ** buf_ptrs[], int num_bufs, size_t bufsiz)

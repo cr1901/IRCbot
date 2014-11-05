@@ -21,6 +21,7 @@ int discard_received_input(sock_id sock, char * line_buffer, unsigned int line_b
 /* IRC helpers */
 void set_credentials(sock_id sock, char * output_buffer, const char * user_name, const char * nick);
 void join_room(sock_id sock, char * output_buffer, const char * room_name);
+void send_pong_from_ping(sock_id sock, char * ping_buffer);
 
 
 

@@ -32,6 +32,20 @@ void join_room(sock_id sock, char * output_buffer, const char * room_name)
   sock_printf(sock, output_buffer, "JOIN %s" _NL_, room_name);
 }
 
+void send_pong_from_ping(sock_id sock, char * ping_buffer)
+{
+  /* Original code checked return value of write... is this necessary? */
+  int chars_written;
+  time_t curr_time;
+  struct tm * struct_time;
+  
+  ping_buffer[1] = 'O';
+  chars_written = write(sock, ping_buffer, strlen(ping_buffer));
+  time(&curr_time);
+  struct_time = localtime(&curr_time);
+  debug_fprintf(stderr, "PONG sent in response to PING. (%d bytes, time: %s)", chars_written, asctime(struct_time));
+}
+
 /* void send_message(sock_id sock, char * output_buffer, const char * recipient, const char * message)
 {
 	
