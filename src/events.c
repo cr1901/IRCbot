@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <time.h>
 
 #include <unistd.h>
@@ -93,9 +94,34 @@ IRC_EVENTS parse_event(const IRC_TOKENS * irc_toks)
 IRC_EVENTS parse_bot_command(const IRC_TOKENS * irc_toks)
 {
   IRC_EVENTS curr_event;
-  if(!strcmp(&irc_toks->params[1][1], "quit"))
+
+  if(!strcmp(&irc_toks->params[1][1], "answer"))
+  {
+    curr_event = COMMAND_ANSWER;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "game"))
+  {
+    curr_event = COMMAND_GAME;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "help"))
+  {
+    curr_event = COMMAND_HELP;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "join"))
+  {
+    curr_event = COMMAND_JOIN;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "quit"))
   {
     curr_event = COMMAND_QUIT;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "rules"))
+  {
+    curr_event = COMMAND_RULES;
+  }
+  else if(!strcmp(&irc_toks->params[1][1], "stats"))
+  {
+    curr_event = COMMAND_STATS;
   }
   else
   {

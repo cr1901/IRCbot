@@ -14,6 +14,7 @@ typedef struct irc_tokens
 }IRC_TOKENS;
 
 int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens);
+char * determine_msg_recipient(char * nick_buffer, const char * bot_nick, const IRC_TOKENS * tokens);
 /* parse_trivia_answer */
 
 #endif

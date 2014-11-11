@@ -100,13 +100,9 @@ int main(int argc, char * argv[])
   {
     int read_retval, tok_retval;
     IRC_EVENTS curr_event;
-   char * msg_recipient;
+    char * msg_recipient;
     char nickname[17] = {'\0'};
-    ptrdiff_t nickname_len;
     int count = 0;
-    
-    
-    curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks);
     
     /* fprintf(stderr, "Origin: %s, Command: %s, Num Params: %u\nParams:\n", \
     	      irc_toks.prefix, irc_toks.command, irc_toks.num_params);
@@ -117,43 +113,31 @@ int main(int argc, char * argv[])
     }
     fputs("\n", stderr); */
     
-    /* Refactor from here... */
-    nickname_len = strchr(irc_toks.prefix, '!') - irc_toks.prefix;
-    if(nickname_len < 17 && nickname_len >= 0)
-    {
-      strncpy(nickname, irc_toks.prefix, nickname_len);
-    }
-    else
-    {
-      strcpy(nickname, "NULL");
-    }
     
-    if(!strcmp(irc_toks.params[0], cfg_file.nickname))
-    {
-      msg_recipient = nickname;
-    }
-    else
-    {
-      msg_recipient = irc_toks.params[0];
-    }
-    /* To here... */
+    curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks);
+    msg_recipient = determine_msg_recipient(nickname, cfg_file.nickname, &irc_toks);
     
-    
-    if(curr_event == INVITE)
+    switch(curr_event)
     {
-      fprintf(stderr, "Invite received from: %s\n", irc_toks.params[1]);
-      join_room(my_socket, output_buffer, irc_toks.params[1]);
-    }
-    else if(curr_event == COMMAND_QUIT)
-    {
-      sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, msg_recipient);
-      sock_printf(my_socket, output_buffer, "QUIT :Chances are, I'm being worked on." _NL_);
-      done = 1;    
-    }
-    else if(curr_event == COMMAND_BAD)
-    {
+      case INVITE:
+        fprintf(stderr, "Invite received from: %s\n", irc_toks.params[1]);
+        join_room(my_socket, output_buffer, irc_toks.params[1]);
+        break;
+      /* case KICK: 
+        Go back to idle mode, discard game state. */
+      case COMMAND_QUIT:
+        sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, msg_recipient);
+        /* Send goodbye message to all rooms. */
+        sock_printf(my_socket, output_buffer, "QUIT :Chances are, I'm being worked on." _NL_);
+      case SOCKET_CLOSED:
+        done = 1;
+        break;
+      case COMMAND_BAD:
     	sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
-    	  "didn't understand the command." _NL_, msg_recipient, nickname);    
+    	  "didn't understand the command." _NL_, msg_recipient, nickname);
+    	break;
+      default:
+        break;
     }
     
     /* read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);

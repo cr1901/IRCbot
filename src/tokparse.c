@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <string.h>
 
 #include "tokparse.h"
@@ -109,5 +110,33 @@ int tokenize_irc_line(const char * line_buffer, IRC_TOKENS * tokens)
   return 0;
 }
 
+char * determine_msg_recipient(char * nick_buffer, const char * bot_nick, const IRC_TOKENS * tokens)
+{
+  ptrdiff_t nickname_len = strchr(tokens->prefix, '!') - tokens->prefix;
+  char * msg_recipient;
+  /* First, extract the nick of the person sending the message. */
+  if(nickname_len < 17 && nickname_len >= 0)
+  {
+    strncpy(nick_buffer, tokens->prefix, nickname_len);
+  }
+  else
+  {
+    strcpy(nick_buffer, "NULL");
+  }
+  
+  /* Was the bot explicitly specified as the message recipient? */
+  if(!strcmp(tokens->params[0], bot_nick))
+  {
+    /* If so, the msg recipient is the person who sent the msg. */
+    msg_recipient = nick_buffer;
+  }
+  else
+  {
+    /* Else, just send the msg to the whole room. */
+    msg_recipient = tokens->params[0];
+  }
+  
+  return msg_recipient;
+}
 
 /* int get_next_token(char * */
