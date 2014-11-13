@@ -13,7 +13,8 @@
 static IRC_EVENTS parse_event(const IRC_TOKENS * tokens);
 static IRC_EVENTS parse_bot_command(const IRC_TOKENS * tokens); /* Commands beginning with '%' are treated separate. */
 
-IRC_EVENTS wait_for_event(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state, IRC_TOKENS * tokens)
+IRC_EVENTS wait_for_event(sock_id sock, char * line_buffer, unsigned int line_bufsiz, \
+  READLINE_STATE * temp_state, IRC_TOKENS * tokens, EVENT_TIMER * timer)
 {
   int internal_event_processed;
   IRC_EVENTS event_to_handle = NOT_YET_KNOWN;

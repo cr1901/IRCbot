@@ -100,7 +100,8 @@ int main(int argc, char * argv[])
   {
     int read_retval, tok_retval;
     IRC_EVENTS curr_event;
-    char * msg_recipient;
+    EVENT_TIMER timeout_event;
+    char * msg_recipient, * timeout_recipient;
     char nickname[17] = {'\0'};
     int count = 0;
     
@@ -113,9 +114,21 @@ int main(int argc, char * argv[])
     }
     fputs("\n", stderr); */
     
+    /* Find timer closest to expiring (if any). Set the timeout recipient 
+    equal to the room where the timeout is */
     
-    curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks);
-    msg_recipient = determine_msg_recipient(nickname, cfg_file.nickname, &irc_toks);
+    
+    curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks, &timeout_event);
+    
+    if(curr_event != TIMER_EXPIRED)
+    {
+      msg_recipient = determine_msg_recipient(nickname, cfg_file.nickname, &irc_toks);
+    }
+    else
+    {
+      /* Set msg_recipient to timer recipient? */
+    }
+    
     
     switch(curr_event)
     {
@@ -125,6 +138,11 @@ int main(int argc, char * argv[])
         break;
       /* case KICK: 
         Go back to idle mode, discard game state. */
+      /* case COMMAND_GAME:
+        SET_TIMER(timeout_event, QUIZ_QUESTION_TIMEOUT);
+        break; */
+      case COMMAND_JOIN:
+        break;
       case COMMAND_QUIT:
         sock_printf(my_socket, output_buffer, "PRIVMSG %s :Goodbye" _NL_, msg_recipient);
         /* Send goodbye message to all rooms. */
@@ -135,7 +153,9 @@ int main(int argc, char * argv[])
       case COMMAND_BAD:
     	sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
     	  "didn't understand the command." _NL_, msg_recipient, nickname);
-    	break;
+        break;
+      /* case TIMER_EXPIRED:
+        break; */
       default:
         break;
     }
