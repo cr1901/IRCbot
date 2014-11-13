@@ -14,7 +14,7 @@ typedef int sock_id;
 
 /* socket helpers */
 int get_a_socket_and_connect(sock_id * sock, const char * hostname, const char * port);
-int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state);
+int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state, int timeout);
 int sock_printf(sock_id sock, char * buff, /* int buflen, */ const char * fmt, ...);
 int discard_received_input(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state);
 

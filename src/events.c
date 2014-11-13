@@ -22,17 +22,49 @@ IRC_EVENTS wait_for_event(sock_id sock, char * line_buffer, unsigned int line_bu
   /* Automatically handle PING/PONG. Timeout is 5 minutes. */
   do
   {
-    int read_retval, tok_retval;
+    int read_retval, tok_retval, not_expecting_timeout;
     
     internal_event_processed = 0;
-    read_retval = read_line_from_socket(sock, line_buffer, BUFSIZ, temp_state);
+    not_expecting_timeout = (timer == NULL);
+    
+    /* For all timeouts except the default socket timeout, timeouts should be
+    cumulative over read_line_from_socket calls. So if the time difference that
+    was being monitored was exceeded before the socket call, this counts as an
+    event, and we shouldn't bother. */
+    
+    if(not_expecting_timeout)
+    {
+      read_retval = read_line_from_socket(sock, line_buffer, line_bufsiz, temp_state, 300);
+    }
+    else
+    {
+      int time_left = TIME_LEFT((* timer));
+      
+      if(time_left > 0)
+      {
+        read_retval = read_line_from_socket(sock, line_buffer, line_bufsiz, temp_state, time_left);
+      }
+      else
+      {
+        read_retval = -4;
+      }
+    }
+    
     #ifndef NPRINT_OUTPUT
     write(0, line_buffer, strlen(line_buffer));
     #endif
     switch(read_retval)
     {
-       case -4:
-      	event_to_handle = SOCKET_TIMEOUT;
+      case -4:
+        if(not_expecting_timeout)
+        {
+          event_to_handle = SOCKET_TIMEOUT;
+        }
+        else
+        {
+          ACK_TIMEOUT((* timer));
+          event_to_handle = TIMER_EXPIRED;
+        }
       	break;
       
       case -3:

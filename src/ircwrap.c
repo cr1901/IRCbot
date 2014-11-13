@@ -115,11 +115,18 @@ with copying data into another buffer */
 -2- Output buffer too small for message
 -3- Socket closed
 -4- Timeout (300 seconds) */
-int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state)
+int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bufsiz, READLINE_STATE * temp_state, int timeout)
 {
   int chars_read;
   int read_finished = 0, readline_retval = 0;
   unsigned int used_elements;
+  
+  /* Failsafe? EINVAL should take care of bad timeout in select() */
+  /* if(timeout < 0)
+  {
+    readline_retval = -4;
+    read_finished = 1;
+  } */
   
   /* What is a good way to guard against the case where buf_offset < buf? */
   used_elements = temp_state->buf_offset - temp_state->buf;
@@ -187,7 +194,7 @@ int read_line_from_socket(sock_id sock, char * line_buffer, unsigned int line_bu
       
       FD_ZERO(&rfds);
       FD_SET(sock, &rfds);
-      tv.tv_sec = 300;
+      tv.tv_sec = timeout;
       tv.tv_usec = 0;
       
       select_retval = select(sock + 1, &rfds, NULL, NULL, &tv);
