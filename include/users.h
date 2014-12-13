@@ -1,8 +1,9 @@
 #ifndef USERS_H
 #define USERS_H
 
-#include "cc_config.h"
-
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
 #include <sys/types.h>
 
 #include <db5/db.h>

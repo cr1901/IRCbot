@@ -256,7 +256,7 @@ int discard_received_input(sock_id sock, char * line_buffer, unsigned int line_b
   {
     return -1;
   }
-  else if(errno == EAGAIN)
+  else if(errno == EAGAIN || errno == EWOULDBLOCK)
   {
     return 0;
   }

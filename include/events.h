@@ -39,9 +39,10 @@ typedef struct event_timer
 #define QUIZ_QUESTION_TIMEOUT 10
 
 #define TIME_LEFT(_x) (_x).target_time - (int) difftime(time(NULL), (_x).start_time)
-#define SET_TIMER(_x, _y) (_x).start_time = time(NULL); (_x).target_time = _y; (_x).timer_active = 1;
-#define ACK_TIMEOUT(_x) (_x).timeout_ack = 1;
-#define UNSET_TIMER(_x) (_x).timer_active = 0; (_x).timeout_ack = 0;
+#define SET_TIMER(_x, _y) (_x).start_time = time(NULL); (_x).target_time = _y; (_x).timer_active = 1
+#define ACK_TIMEOUT(_x) (_x).timeout_ack = 1
+#define TIMER_ACTIVE(_x) (_x).timer_active == 1
+#define UNSET_TIMER(_x) (_x).timer_active = 0; (_x).timeout_ack = 0
 
 IRC_EVENTS wait_for_event(sock_id sock, char * line_buffer, \
   unsigned int line_bufsiz, READLINE_STATE * temp_state, IRC_TOKENS * tokens, \

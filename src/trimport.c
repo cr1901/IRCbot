@@ -1,4 +1,6 @@
-#include "cc_config.h"
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
 
 /* Import a trivia DB json file into the global trivia database. Takes
 advantage of being able to store multiple DBs in a single file. */

@@ -25,7 +25,7 @@ IRC_EVENTS wait_for_event(sock_id sock, char * line_buffer, unsigned int line_bu
     int read_retval, tok_retval, not_expecting_timeout;
     
     internal_event_processed = 0;
-    not_expecting_timeout = (timer == NULL);
+    not_expecting_timeout = (timer->timer_active == 0);
     
     /* For all timeouts except the default socket timeout, timeouts should be
     cumulative over read_line_from_socket calls. So if the time difference that

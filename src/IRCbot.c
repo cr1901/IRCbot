@@ -1,4 +1,7 @@
-#include "cc_config.h"
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
+
 
 /* ANSI headers */
 #include <stdio.h>
@@ -10,6 +13,7 @@
 #include <errno.h>
 
 /* Library headers */
+#include <db5/db.h>
 #include <jansson.h>
 
 /* This source defines */
@@ -38,6 +42,9 @@ int main(int argc, char * argv[])
   READLINE_STATE socket_buf;
   IRC_TOKENS irc_toks;
   CFG_PARAMS cfg_file;
+  EVENT_TIMER timeout_event = {0, 0, 0, 0}; /* Unfortunately, this needs to be set
+  here b/c when we initially enter the loop, wait_for_event will expect
+  timeout_event to be null */
   DB * user_db, * trivia_db, * game_db;
   ptrdiff_t db_path_size; /* We need the size in bytes of argv[4], not strlen. */
   
@@ -100,7 +107,6 @@ int main(int argc, char * argv[])
   {
     int read_retval, tok_retval;
     IRC_EVENTS curr_event;
-    EVENT_TIMER timeout_event;
     char * msg_recipient, * timeout_recipient;
     char nickname[17] = {'\0'};
     int count = 0;
@@ -117,17 +123,26 @@ int main(int argc, char * argv[])
     /* Find timer closest to expiring (if any). Set the timeout recipient 
     equal to the room where the timeout is */
     
-    
+    /* Split wait_for_event into a socket-polling and parsing portion,
+    the latter of which depends on whether a timeout occurred or a message
+    was received. Also make sure to find the Timer closest to expiring, and use
+    that as the Timer wait_for_event. Perhaps use ROOM_STATE to determine
+    msg_recipient, or keep a variable? If Timer already expired, handle immediately-
+    don't bother calling wait_for_event. Also store an instance to current trivia q, and
+    the game constestants DB ptr in
+    the ROOM_STATE struct. ROOM_STATE can be manipulated by the client freely, as
+    it is just an encapsulation for an array of locals that would otherwise
+    exist. */
     curr_event = wait_for_event(my_socket, line_buffer, BUFSIZ, &socket_buf, &irc_toks, &timeout_event);
     
-    if(curr_event != TIMER_EXPIRED)
-    {
+    /* if(curr_event != TIMER_EXPIRED)
+    { */
       msg_recipient = determine_msg_recipient(nickname, cfg_file.nickname, &irc_toks);
-    }
+    /*}
     else
-    {
-      /* Set msg_recipient to timer recipient? */
-    }
+    {*/
+      /* Set msg_recipient to Timer recipient? */
+    /*} */
     
     
     switch(curr_event)
@@ -138,9 +153,9 @@ int main(int argc, char * argv[])
         break;
       /* case KICK: 
         Go back to idle mode, discard game state. */
-      /* case COMMAND_GAME:
-        SET_TIMER(timeout_event, QUIZ_QUESTION_TIMEOUT);
-        break; */
+      case COMMAND_GAME:
+        /* SET_TIMER(timeout_event, QUIZ_QUESTION_TIMEOUT); */
+        break;
       case COMMAND_JOIN:
         break;
       case COMMAND_QUIT:
@@ -154,11 +169,20 @@ int main(int argc, char * argv[])
     	sock_printf(my_socket, output_buffer, "PRIVMSG %s :Sorry, %s, I "\
     	  "didn't understand the command." _NL_, msg_recipient, nickname);
         break;
-      /* case TIMER_EXPIRED:
-        break; */
+      case TIMER_EXPIRED:
+        /* UNSET_TIMER(timeout_event);
+        sock_printf(my_socket, output_buffer, "PRIVMSG %s :Timer has expired." _NL_, msg_recipient); */
+        break;
       default:
         break;
     }
+    
+    /* if(curr_event == TIMER_EXPIRED)
+    {
+      Make sure we unset the Timer and find the
+      next Timer closest to expiring- if any-
+      based upon each room's state.
+    } */
     
     /* read_retval = read_line_from_socket(my_socket, line_buffer, BUFSIZ, &socket_buf);
     if(read_retval == -3)

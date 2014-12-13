@@ -25,8 +25,10 @@ Bit mask indicating answer- log2(0x??) = answer position
 #include <stdlib.h>
 #include <string.h>
 
-#include "cc_config.h"
 /* #include "trivia.h" */
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
 
 #include <jansson.h>
 

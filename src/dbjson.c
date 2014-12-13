@@ -1,4 +1,6 @@
-#include "cc_config.h"
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
 
 #include <errno.h> /* EEXIST */
 

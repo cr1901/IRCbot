@@ -1,7 +1,9 @@
 #ifndef TRIVIA_H
 #define TRIVIA_H
 
-#include "cc_config.h"
+#ifndef POSIX_MAKE
+  #include "cc_config.h"
+#endif
 #include <stddef.h>
 
 #include <db5/db.h>
